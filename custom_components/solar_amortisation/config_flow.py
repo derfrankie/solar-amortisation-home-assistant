@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from typing import Any
 
@@ -22,6 +23,8 @@ from .const import (
     CONF_START_DATE,
     DOMAIN,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SolarAmortisationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -45,6 +48,7 @@ class SolarAmortisationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         errors: dict[str, str] = {}
         if user_input is not None:
+            _LOGGER.debug("Received solar amortisation config input: %s", user_input)
             try:
                 date.fromisoformat(user_input[CONF_START_DATE])
             except ValueError:
@@ -55,7 +59,7 @@ class SolarAmortisationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=user_input[CONF_SITE_NAME],
-                    data=user_input,
+                    data=_normalize_input(user_input),
                 )
 
         return self.async_show_form(
@@ -70,40 +74,16 @@ def _site_schema() -> vol.Schema:
         {
             vol.Required(CONF_SITE_NAME): str,
             vol.Optional(CONF_DESCRIPTION, default=""): str,
-            vol.Required(CONF_INVESTMENT_AMOUNT): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    mode=selector.NumberSelectorMode.BOX,
-                    step=0.01,
-                    unit_of_measurement="EUR",
-                )
-            ),
-            vol.Required(CONF_START_DATE, default=date.today().isoformat()): str,
-            vol.Required(CONF_GRID_IMPORT_ENTITY): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Required(CONF_GRID_EXPORT_ENTITY): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
-            ),
-            vol.Required(CONF_PV_GENERATION_ENTITIES): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", multiple=True)
-            ),
-            vol.Required(CONF_ELECTRICITY_PRICE): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    mode=selector.NumberSelectorMode.BOX,
-                    step=0.0001,
-                    unit_of_measurement="EUR/kWh",
-                )
-            ),
-            vol.Optional(CONF_FEED_IN_TARIFF, default=0): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    mode=selector.NumberSelectorMode.BOX,
-                    step=0.0001,
-                    unit_of_measurement="EUR/kWh",
-                )
-            ),
+            vol.Required(CONF_INVESTMENT_AMOUNT): _money_selector(),
+            vol.Required(
+                CONF_START_DATE,
+                default=date.today().isoformat(),
+            ): _date_selector(),
+            vol.Required(CONF_GRID_IMPORT_ENTITY): _sensor_entity_selector(),
+            vol.Required(CONF_GRID_EXPORT_ENTITY): _sensor_entity_selector(),
+            vol.Required(CONF_PV_GENERATION_ENTITIES): _sensor_entities_selector(),
+            vol.Required(CONF_ELECTRICITY_PRICE): _price_selector(),
+            vol.Optional(CONF_FEED_IN_TARIFF, default=0): _price_selector(),
         }
     )
 
@@ -121,7 +101,8 @@ class SolarAmortisationOptionsFlow(config_entries.OptionsFlow):
         """Manage site options."""
 
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            _LOGGER.debug("Received solar amortisation options input: %s", user_input)
+            return self.async_create_entry(title="", data=_normalize_input(user_input))
 
         merged = {**self._entry.data, **self._entry.options}
         return self.async_show_form(
@@ -144,53 +125,79 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_INVESTMENT_AMOUNT,
                 default=defaults.get(CONF_INVESTMENT_AMOUNT, 0),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    mode=selector.NumberSelectorMode.BOX,
-                    step=0.01,
-                    unit_of_measurement="EUR",
-                )
-            ),
+            ): _money_selector(),
             vol.Required(
                 CONF_START_DATE,
                 default=defaults.get(CONF_START_DATE, date.today().isoformat()),
-            ): str,
+            ): _date_selector(),
             vol.Required(
                 CONF_GRID_IMPORT_ENTITY,
                 default=defaults.get(CONF_GRID_IMPORT_ENTITY),
-            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+            ): _sensor_entity_selector(),
             vol.Required(
                 CONF_GRID_EXPORT_ENTITY,
                 default=defaults.get(CONF_GRID_EXPORT_ENTITY),
-            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+            ): _sensor_entity_selector(),
             vol.Required(
                 CONF_PV_GENERATION_ENTITIES,
                 default=defaults.get(CONF_PV_GENERATION_ENTITIES, []),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor", multiple=True)
-            ),
+            ): _sensor_entities_selector(),
             vol.Required(
                 CONF_ELECTRICITY_PRICE,
                 default=defaults.get(CONF_ELECTRICITY_PRICE, 0),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    mode=selector.NumberSelectorMode.BOX,
-                    step=0.0001,
-                    unit_of_measurement="EUR/kWh",
-                )
-            ),
+            ): _price_selector(),
             vol.Optional(
                 CONF_FEED_IN_TARIFF,
                 default=defaults.get(CONF_FEED_IN_TARIFF, 0),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    mode=selector.NumberSelectorMode.BOX,
-                    step=0.0001,
-                    unit_of_measurement="EUR/kWh",
-                )
-            ),
+            ): _price_selector(),
         }
     )
+
+
+def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
+    data = dict(user_input)
+    data[CONF_INVESTMENT_AMOUNT] = float(data[CONF_INVESTMENT_AMOUNT])
+    data[CONF_ELECTRICITY_PRICE] = float(data[CONF_ELECTRICITY_PRICE])
+    data[CONF_FEED_IN_TARIFF] = float(data.get(CONF_FEED_IN_TARIFF, 0))
+    pv_entities = data[CONF_PV_GENERATION_ENTITIES]
+    if isinstance(pv_entities, str):
+        data[CONF_PV_GENERATION_ENTITIES] = [pv_entities]
+    return data
+
+
+def _money_selector() -> selector.Selector:
+    return selector.selector(
+        {
+            "number": {
+                "min": 0,
+                "mode": "box",
+                "step": 0.01,
+                "unit_of_measurement": "EUR",
+            }
+        }
+    )
+
+
+def _price_selector() -> selector.Selector:
+    return selector.selector(
+        {
+            "number": {
+                "min": 0,
+                "mode": "box",
+                "step": 0.0001,
+                "unit_of_measurement": "EUR/kWh",
+            }
+        }
+    )
+
+
+def _date_selector() -> selector.Selector:
+    return selector.selector({"date": {}})
+
+
+def _sensor_entity_selector() -> selector.Selector:
+    return selector.selector({"entity": {"domain": "sensor"}})
+
+
+def _sensor_entities_selector() -> selector.Selector:
+    return selector.selector({"entity": {"domain": "sensor", "multiple": True}})
