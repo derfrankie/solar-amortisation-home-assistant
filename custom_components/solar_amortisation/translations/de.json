@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Solar-Amortisationsstandort",
+        "description": "Konfiguriere einen Standort mit gemeinsamen Netzzaehlern und einer oder mehreren PV-Erzeugungsentitaeten.",
+        "data": {
+          "site_name": "Standortname",
+          "description": "Beschreibung",
+          "investment_amount": "Investitionsbetrag",
+          "start_date": "Startdatum",
+          "grid_import_entity": "Entitaet Netzbezug gesamt",
+          "grid_export_entity": "Entitaet Netzeinspeisung gesamt",
+          "pv_generation_entities": "Entitaeten PV-Erzeugung gesamt",
+          "electricity_price": "Strompreis",
+          "feed_in_tariff": "Einspeiseverguetung"
+        }
+      }
+    },
+    "error": {
+      "invalid_date": "Bitte YYYY-MM-DD verwenden."
+    },
+    "abort": {
+      "already_configured": "Dieser Standort ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Solar-Amortisation Optionen",
+        "data": {
+          "site_name": "Standortname",
+          "description": "Beschreibung",
+          "investment_amount": "Investitionsbetrag",
+          "start_date": "Startdatum",
+          "grid_import_entity": "Entitaet Netzbezug gesamt",
+          "grid_export_entity": "Entitaet Netzeinspeisung gesamt",
+          "pv_generation_entities": "Entitaeten PV-Erzeugung gesamt",
+          "electricity_price": "Strompreis",
+          "feed_in_tariff": "Einspeiseverguetung"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "daily_return": {
+        "name": "Tagesertrag"
+      },
+      "cumulative_return": {
+        "name": "Kumulierter Ertrag"
+      },
+      "remaining_amount": {
+        "name": "Restbetrag"
+      },
+      "days_since_start": {
+        "name": "Tage seit Start"
+      },
+      "forecast_days_30": {
+        "name": "Resttage 30 Tage"
+      },
+      "forecast_days_365": {
+        "name": "Resttage 365 Tage"
+      },
+      "forecast_days_since_start": {
+        "name": "Resttage seit Start"
+      },
+      "pv_generation_today": {
+        "name": "PV-Erzeugung heute"
+      },
+      "self_consumed_pv_today": {
+        "name": "PV-Eigenverbrauch heute"
+      },
+      "grid_import_today": {
+        "name": "Netzbezug heute"
+      },
+      "grid_export_today": {
+        "name": "Netzeinspeisung heute"
+      },
+      "electricity_price_today": {
+        "name": "Strompreis heute"
+      },
+      "feed_in_tariff_today": {
+        "name": "Einspeiseverguetung heute"
+      },
+      "amortisation_progress": {
+        "name": "Amortisationsfortschritt"
+      }
+    }
+  }
+}

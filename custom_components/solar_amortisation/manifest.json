@@ -1,0 +1,11 @@
+{
+  "domain": "solar_amortisation",
+  "name": "Solar Amortisation",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/custom-components/solar-amortisation-ha",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/custom-components/solar-amortisation-ha/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

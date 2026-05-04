@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Solar amortisation site",
+        "description": "Configure one site with shared grid meters and one or more PV generation entities.",
+        "data": {
+          "site_name": "Site name",
+          "description": "Description",
+          "investment_amount": "Investment amount",
+          "start_date": "Start date",
+          "grid_import_entity": "Total grid import entity",
+          "grid_export_entity": "Total grid export entity",
+          "pv_generation_entities": "Total PV generation entities",
+          "electricity_price": "Electricity price",
+          "feed_in_tariff": "Feed-in tariff"
+        }
+      }
+    },
+    "error": {
+      "invalid_date": "Use YYYY-MM-DD."
+    },
+    "abort": {
+      "already_configured": "This site is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Solar amortisation site options",
+        "data": {
+          "site_name": "Site name",
+          "description": "Description",
+          "investment_amount": "Investment amount",
+          "start_date": "Start date",
+          "grid_import_entity": "Total grid import entity",
+          "grid_export_entity": "Total grid export entity",
+          "pv_generation_entities": "Total PV generation entities",
+          "electricity_price": "Electricity price",
+          "feed_in_tariff": "Feed-in tariff"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "daily_return": {
+        "name": "Daily return"
+      },
+      "cumulative_return": {
+        "name": "Cumulative return"
+      },
+      "remaining_amount": {
+        "name": "Remaining amount"
+      },
+      "days_since_start": {
+        "name": "Days since start"
+      },
+      "forecast_days_30": {
+        "name": "Forecast days 30 days"
+      },
+      "forecast_days_365": {
+        "name": "Forecast days 365 days"
+      },
+      "forecast_days_since_start": {
+        "name": "Forecast days since start"
+      },
+      "pv_generation_today": {
+        "name": "PV generation today"
+      },
+      "self_consumed_pv_today": {
+        "name": "Self-consumed PV today"
+      },
+      "grid_import_today": {
+        "name": "Grid import today"
+      },
+      "grid_export_today": {
+        "name": "Grid export today"
+      },
+      "electricity_price_today": {
+        "name": "Electricity price today"
+      },
+      "feed_in_tariff_today": {
+        "name": "Feed-in tariff today"
+      },
+      "amortisation_progress": {
+        "name": "Amortisation progress"
+      }
+    }
+  }
+}
