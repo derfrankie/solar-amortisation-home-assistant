@@ -9,7 +9,6 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.helpers import selector
 
 from .const import (
     CONF_DESCRIPTION,
@@ -33,9 +32,7 @@ class SolarAmortisationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     @staticmethod
-    def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
-    ) -> SolarAmortisationOptionsFlow:
+    def async_get_options_flow(config_entry):
         """Create the options flow."""
 
         return SolarAmortisationOptionsFlow(config_entry)
@@ -43,7 +40,7 @@ class SolarAmortisationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
+    ):
         """Create a site."""
 
         errors: dict[str, str] = {}
@@ -97,7 +94,7 @@ class SolarAmortisationOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> config_entries.ConfigFlowResult:
+    ):
         """Manage site options."""
 
         if user_input is not None:
@@ -159,45 +156,33 @@ def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
     data[CONF_INVESTMENT_AMOUNT] = float(data[CONF_INVESTMENT_AMOUNT])
     data[CONF_ELECTRICITY_PRICE] = float(data[CONF_ELECTRICITY_PRICE])
     data[CONF_FEED_IN_TARIFF] = float(data.get(CONF_FEED_IN_TARIFF, 0))
-    pv_entities = data[CONF_PV_GENERATION_ENTITIES]
-    if isinstance(pv_entities, str):
-        data[CONF_PV_GENERATION_ENTITIES] = [pv_entities]
+    data[CONF_PV_GENERATION_ENTITIES] = _normalize_pv_entities(
+        data[CONF_PV_GENERATION_ENTITIES]
+    )
     return data
 
 
-def _money_selector() -> selector.Selector:
-    return selector.selector(
-        {
-            "number": {
-                "min": 0,
-                "mode": "box",
-                "step": 0.01,
-                "unit_of_measurement": "EUR",
-            }
-        }
-    )
+def _money_selector() -> type:
+    return float
 
 
-def _price_selector() -> selector.Selector:
-    return selector.selector(
-        {
-            "number": {
-                "min": 0,
-                "mode": "box",
-                "step": 0.0001,
-                "unit_of_measurement": "EUR/kWh",
-            }
-        }
-    )
+def _price_selector() -> type:
+    return float
 
 
-def _date_selector() -> selector.Selector:
-    return selector.selector({"date": {}})
+def _date_selector() -> type:
+    return str
 
 
-def _sensor_entity_selector() -> selector.Selector:
-    return selector.selector({"entity": {"domain": "sensor"}})
+def _sensor_entity_selector() -> type:
+    return str
 
 
-def _sensor_entities_selector() -> selector.Selector:
-    return selector.selector({"entity": {"domain": "sensor", "multiple": True}})
+def _sensor_entities_selector() -> vol.All:
+    return vol.All(vol.Any([str], str), _normalize_pv_entities)
+
+
+def _normalize_pv_entities(value: list[str] | str) -> list[str]:
+    if isinstance(value, str):
+        return [entity.strip() for entity in value.split(",") if entity.strip()]
+    return value

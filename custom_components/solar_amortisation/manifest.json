@@ -4,6 +4,7 @@
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://github.com/custom-components/solar-amortisation-ha",
+  "integration_type": "helper",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/custom-components/solar-amortisation-ha/issues",
   "requirements": [],
