@@ -1,0 +1,33 @@
+ich möchte in home assistant meine amortisation des solaranlage tracken ...
+als hacs intgration (custom repository) und custom component - damit ich mehr als eine anlage eintragen kann
+
+
+- Hier kann ich Analgen hinzufügen (namen und Beschreibung)
+    - ich möchte den Investitionspreis eintragen, und das datum seit dem es läuft
+- meinen aktuellen strompreis (der sich vielleicht ändert)
+- ich will die einspeisevergütung eingeben ... auch datum abhängig (zur zeit null vielleicht später mehr, dann weniger)
+- die amortisation für die Immobilie berechnet sich - total verbrauchten strom am tag * strompreis - aus effektiv vom Netz gekauften strom + erlös aus verkauf strom (einspeisevergütung)
+
+    
+- Der Stromzähler liefert nur gesamt-stromverbrauch - nicht täglich
+- Die Entitäten für den gesamten Verbrauch sind in HA integriert - konnte ich aber nicht finden
+- ich sehe sie nur im dashboard
+- ich könnte über PowerCalc Hilfsentitäten schaffen die Verbrauch errechnen, will aber unabhängig von anderen integrationen sein
+
+
+
+- ich möchte am Ende zwei dinge täglich protokollieren
+
+- Ertrag und Restbetrag ... der als chart täglich angezeigt werden kann (linie)
+
+- Tage seit die Anlagen läuft (Pro )
+
+- und ein Rest tage basierend auf montags durchschnitt
+
+- und rest tage basierend auf jahres-durchschnitt
+
+
+
+
+- hast du fragen und erstelle eine Plan für ein Repo für diese Custom integrationen
+
