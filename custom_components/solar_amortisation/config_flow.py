@@ -153,9 +153,9 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
 
 def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
     data = dict(user_input)
-    data[CONF_INVESTMENT_AMOUNT] = float(data[CONF_INVESTMENT_AMOUNT])
-    data[CONF_ELECTRICITY_PRICE] = float(data[CONF_ELECTRICITY_PRICE])
-    data[CONF_FEED_IN_TARIFF] = float(data.get(CONF_FEED_IN_TARIFF, 0))
+    data[CONF_INVESTMENT_AMOUNT] = _parse_decimal(data[CONF_INVESTMENT_AMOUNT])
+    data[CONF_ELECTRICITY_PRICE] = _parse_decimal(data[CONF_ELECTRICITY_PRICE])
+    data[CONF_FEED_IN_TARIFF] = _parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0))
     data[CONF_PV_GENERATION_ENTITIES] = _normalize_pv_entities(
         data[CONF_PV_GENERATION_ENTITIES]
     )
@@ -163,11 +163,11 @@ def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
 
 
 def _money_selector() -> type:
-    return float
+    return str
 
 
 def _price_selector() -> type:
-    return float
+    return str
 
 
 def _date_selector() -> type:
@@ -186,3 +186,15 @@ def _normalize_pv_entities(value: list[str] | str) -> list[str]:
     if isinstance(value, str):
         return [entity.strip() for entity in value.split(",") if entity.strip()]
     return value
+
+
+def _parse_decimal(value: Any) -> float:
+    if isinstance(value, int | float):
+        return float(value)
+
+    normalized = str(value).strip().replace(" ", "")
+    if "," in normalized and "." in normalized:
+        normalized = normalized.replace(".", "").replace(",", ".")
+    else:
+        normalized = normalized.replace(",", ".")
+    return float(normalized)
