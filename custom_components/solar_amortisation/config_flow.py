@@ -178,8 +178,8 @@ def _sensor_entity_selector() -> type:
     return str
 
 
-def _sensor_entities_selector() -> vol.All:
-    return vol.All(vol.Any([str], str), _normalize_pv_entities)
+def _sensor_entities_selector() -> type:
+    return str
 
 
 def _normalize_pv_entities(value: list[str] | str) -> list[str]:
