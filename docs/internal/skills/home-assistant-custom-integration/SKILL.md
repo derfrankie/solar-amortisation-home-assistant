@@ -113,7 +113,8 @@ Safety notes:
   can become hard failures in newer Home Assistant versions.
 - Daily historical/accounting values should be chart-friendly measurements, not
   Energy Dashboard source meters.
-- Use `_attr_has_entity_name = True` for modern entity naming behavior.
+- Use `_attr_has_entity_name = True` for modern entity naming behavior, with
+  explicit sensor names so entities do not all display as the device/site name.
 
 ## Historical Backfill
 

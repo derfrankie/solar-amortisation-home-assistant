@@ -52,7 +52,7 @@ Use this checklist when setup, config flow, or entity loading fails.
 
 - Custom integrations must define `version`.
 - `domain` must match the integration folder name.
-- `integration_type` should be set explicitly. This integration uses `helper`.
+- `integration_type` should be set explicitly. This integration uses `hub`.
 - `iot_class` should describe the integration behavior. This integration uses
   `calculated`.
 
@@ -80,7 +80,8 @@ Use this checklist when setup, config flow, or entity loading fails.
   newer Home Assistant versions.
 - Daily historical values are exposed as measurement-style chart sensors, not as
   energy dashboard source meters.
-- Add `has_entity_name = True` for modern entity naming behavior.
+- Add `has_entity_name = True` for modern entity naming behavior, with explicit
+  sensor names so entities do not all display as the device/site name.
 
 ### Diagnostics
 

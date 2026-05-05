@@ -25,6 +25,7 @@ from .coordinator import SiteStatus, SolarAmortisationCoordinator
 class SolarSensorEntityDescription(SensorEntityDescription):
     """Description for Solar Amortisation sensors."""
 
+    fallback_name: str
     value_fn: Callable[[SiteStatus], float | int | str | None]
     extra_attrs_fn: Callable[[SiteStatus], dict[str, Any]] | None = None
 
@@ -57,6 +58,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="daily_return",
         translation_key="daily_return",
+        fallback_name="Daily return",
         native_unit_of_measurement=EUR,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -65,6 +67,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="cumulative_return",
         translation_key="cumulative_return",
+        fallback_name="Cumulative return",
         native_unit_of_measurement=EUR,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -73,6 +76,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="remaining_amount",
         translation_key="remaining_amount",
+        fallback_name="Remaining amount",
         native_unit_of_measurement=EUR,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -81,6 +85,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="days_since_start",
         translation_key="days_since_start",
+        fallback_name="Days since start",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.days_since_start,
@@ -88,6 +93,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="forecast_days_30",
         translation_key="forecast_days_30",
+        fallback_name="Forecast days 30 days",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_30,
@@ -96,6 +102,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="forecast_days_365",
         translation_key="forecast_days_365",
+        fallback_name="Forecast days 365 days",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_365,
@@ -104,6 +111,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="forecast_days_since_start",
         translation_key="forecast_days_since_start",
+        fallback_name="Forecast days since start",
         native_unit_of_measurement=UnitOfTime.DAYS,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_since_start,
@@ -112,6 +120,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="pv_generation_today",
         translation_key="pv_generation_today",
+        fallback_name="PV generation today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -120,6 +129,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="self_consumed_pv_today",
         translation_key="self_consumed_pv_today",
+        fallback_name="Self-consumed PV today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -128,6 +138,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="grid_import_today",
         translation_key="grid_import_today",
+        fallback_name="Grid import today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -136,6 +147,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="grid_export_today",
         translation_key="grid_export_today",
+        fallback_name="Grid export today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -144,6 +156,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="electricity_price_today",
         translation_key="electricity_price_today",
+        fallback_name="Electricity price today",
         native_unit_of_measurement=EUR_PER_KWH,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=4,
@@ -152,6 +165,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="feed_in_tariff_today",
         translation_key="feed_in_tariff_today",
+        fallback_name="Feed-in tariff today",
         native_unit_of_measurement=EUR_PER_KWH,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=4,
@@ -160,6 +174,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="amortisation_progress",
         translation_key="amortisation_progress",
+        fallback_name="Amortisation progress",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
@@ -198,6 +213,7 @@ class SolarAmortisationSensor(
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_has_entity_name = True
+        self._attr_name = description.fallback_name
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.entry.entry_id)},
