@@ -153,23 +153,27 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(records[1].cumulative_return_eur, 5.4)
         self.assertEqual(records[1].remaining_amount_eur, 94.6)
 
-    def test_build_daily_deltas_prefers_change_statistics(self) -> None:
+    def test_build_daily_deltas_derive_from_daily_sums(self) -> None:
         rows = {
             "sensor.pv_one": [
-                {"start": "2026-05-01T00:00:00+00:00", "change": 5, "sum": 100},
-                {"start": "2026-05-02T00:00:00+00:00", "change": 7, "sum": 107},
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 95},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 100},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 107},
             ],
             "sensor.pv_two": [
-                {"start": "2026-05-01T00:00:00+00:00", "change": 3, "sum": 50},
-                {"start": "2026-05-02T00:00:00+00:00", "change": 4, "sum": 54},
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 47},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 50},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 54},
             ],
             "sensor.import": [
-                {"start": "2026-05-01T00:00:00+00:00", "change": 2, "sum": 30},
-                {"start": "2026-05-02T00:00:00+00:00", "change": 1, "sum": 31},
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 28},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 30},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 31},
             ],
             "sensor.export": [
-                {"start": "2026-05-01T00:00:00+00:00", "change": 4, "sum": 20},
-                {"start": "2026-05-02T00:00:00+00:00", "change": 5, "sum": 25},
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 16},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 20},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 25},
             ],
         }
 
@@ -215,6 +219,41 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(deltas[date(2026, 5, 1)].pv_generation_kwh, 8)
         self.assertEqual(deltas[date(2026, 5, 1)].grid_import_kwh, 3)
         self.assertEqual(deltas[date(2026, 5, 1)].grid_export_kwh, 2)
+
+    def test_build_daily_deltas_allows_pv_sources_to_start_later(self) -> None:
+        rows = {
+            "sensor.pv_early": [
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 100},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 108},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 118},
+            ],
+            "sensor.pv_late": [
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 5},
+            ],
+            "sensor.import": [
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 20},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 23},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 25},
+            ],
+            "sensor.export": [
+                {"start": "2026-04-30T00:00:00+00:00", "sum": 7},
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 9},
+                {"start": "2026-05-02T00:00:00+00:00", "sum": 12},
+            ],
+        }
+
+        deltas = build_daily_deltas_from_statistics(
+            rows=rows,
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 2),
+            pv_generation_entities=("sensor.pv_early", "sensor.pv_late"),
+            grid_import_entity="sensor.import",
+            grid_export_entity="sensor.export",
+        )
+
+        self.assertEqual(deltas[date(2026, 5, 1)].pv_generation_kwh, 8)
+        self.assertEqual(deltas[date(2026, 5, 2)].pv_generation_kwh, 15)
+        self.assertEqual(len(deltas), 2)
 
 
 def _record(record_date: date, daily_return: float) -> DailyRecord:

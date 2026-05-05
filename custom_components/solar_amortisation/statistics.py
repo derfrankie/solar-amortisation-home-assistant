@@ -102,26 +102,15 @@ class HistoricalStatisticsReader:
         end_time = _start_of_day(end_date + timedelta(days=1))
 
         def _fetch() -> StatisticRows:
-            try:
-                return statistics.statistics_during_period(
-                    self._hass,
-                    start_time,
-                    end_time,
-                    statistic_ids,
-                    "day",
-                    units=None,
-                    types={"change", "sum"},
-                )
-            except (TypeError, ValueError):
-                return statistics.statistics_during_period(
-                    self._hass,
-                    start_time,
-                    end_time,
-                    statistic_ids,
-                    "day",
-                    units=None,
-                    types={"sum"},
-                )
+            return statistics.statistics_during_period(
+                self._hass,
+                start_time,
+                end_time,
+                statistic_ids,
+                "day",
+                units=None,
+                types={"sum"},
+            )
 
         return await recorder.get_instance(self._hass).async_add_executor_job(_fetch)
 
@@ -144,13 +133,9 @@ def build_daily_deltas_from_statistics(
     deltas: dict[date, EnergyDeltas] = {}
     current_date = start_date
     while current_date <= end_date:
-        if (
-            current_date in pv_by_day
-            and current_date in import_by_day
-            and current_date in export_by_day
-        ):
+        if current_date in import_by_day and current_date in export_by_day:
             deltas[current_date] = EnergyDeltas(
-                pv_generation_kwh=pv_by_day[current_date],
+                pv_generation_kwh=pv_by_day.get(current_date, 0),
                 grid_import_kwh=import_by_day[current_date],
                 grid_export_kwh=export_by_day[current_date],
             )
@@ -166,7 +151,13 @@ def _sum_entities_by_day(
 ) -> dict[date, float]:
     totals: dict[date, float] = {}
     for entity_id in entity_ids:
-        for day, value in _entity_by_day(rows, entity_id, start_date, end_date).items():
+        for day, value in _entity_by_day(
+            rows,
+            entity_id,
+            start_date,
+            end_date,
+            allow_missing_baseline=True,
+        ).items():
             totals[day] = totals.get(day, 0) + value
     return totals
 
@@ -176,25 +167,29 @@ def _entity_by_day(
     entity_id: str,
     start_date: date,
     end_date: date,
+    *,
+    allow_missing_baseline: bool = False,
 ) -> dict[date, float]:
     values: dict[date, float] = {}
     previous_sum: float | None = None
 
     for row in sorted(rows.get(entity_id, []), key=_row_start):
         row_date = _row_date(row)
-        row_sum = _as_float(row.get("sum"))
-        change = _as_float(row.get("change"))
+        if row_date < start_date - timedelta(days=1):
+            continue
 
-        if row_date < start_date:
+        row_sum = _as_float(row.get("sum"))
+
+        if row_date <= start_date - timedelta(days=1):
             previous_sum = row_sum
             continue
         if row_date > end_date:
             break
 
-        if change is not None:
-            values[row_date] = max(change, 0)
-        elif row_sum is not None and previous_sum is not None:
+        if row_sum is not None and previous_sum is not None:
             values[row_date] = max(row_sum - previous_sum, 0)
+        elif row_sum is not None and allow_missing_baseline:
+            values[row_date] = max(row_sum, 0)
 
         if row_sum is not None:
             previous_sum = row_sum
