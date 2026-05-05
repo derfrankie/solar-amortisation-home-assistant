@@ -138,7 +138,10 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         return SiteStatus(
             latest_record=latest_record,
             current_snapshot=current_snapshot,
-            days_since_start=calculate_days_since_start(config.start_date, current_date),
+            days_since_start=calculate_days_since_start(
+                config.start_date,
+                current_date,
+            ),
             forecasts=calculate_forecasts(
                 records=records,
                 remaining_amount_eur=remaining,
@@ -204,7 +207,9 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 grid_export_entity=config.grid_export_entity,
             )
         except Exception:
-            _LOGGER.exception("Failed to backfill historical solar amortisation records")
+            _LOGGER.exception(
+                "Failed to backfill historical solar amortisation records",
+            )
             return
 
         backfilled = calculate_backfill_records(

@@ -135,7 +135,9 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
             ): _sensor_entity_selector(),
             vol.Required(
                 CONF_PV_GENERATION_ENTITIES,
-                default=_entities_as_text(defaults.get(CONF_PV_GENERATION_ENTITIES, "")),
+                default=_entities_as_text(
+                    defaults.get(CONF_PV_GENERATION_ENTITIES, ""),
+                ),
             ): _sensor_entities_selector(),
             vol.Required(
                 CONF_ELECTRICITY_PRICE,

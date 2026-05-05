@@ -33,6 +33,26 @@ EUR = "EUR"
 EUR_PER_KWH = "EUR/kWh"
 
 
+def _latest(status: SiteStatus, attr: str) -> float | None:
+    if status.latest_record is None:
+        return None
+    return getattr(status.latest_record, attr)
+
+
+def _forecast_attrs(status: SiteStatus) -> dict[str, Any]:
+    return {"recommended_forecast": status.forecasts.recommended}
+
+
+def _progress(status: SiteStatus) -> float | None:
+    record = status.latest_record
+    if record is None:
+        return None
+    investment = record.cumulative_return_eur + record.remaining_amount_eur
+    if investment <= 0:
+        return None
+    return min(max(record.cumulative_return_eur / investment * 100, 0), 100)
+
+
 SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="daily_return",
@@ -214,23 +234,3 @@ class SolarAmortisationSensor(
         if self.entity_description.extra_attrs_fn is not None:
             attrs.update(self.entity_description.extra_attrs_fn(self.coordinator.data))
         return attrs
-
-
-def _latest(status: SiteStatus, attr: str) -> float | None:
-    if status.latest_record is None:
-        return None
-    return getattr(status.latest_record, attr)
-
-
-def _forecast_attrs(status: SiteStatus) -> dict[str, Any]:
-    return {"recommended_forecast": status.forecasts.recommended}
-
-
-def _progress(status: SiteStatus) -> float | None:
-    record = status.latest_record
-    if record is None:
-        return None
-    investment = record.cumulative_return_eur + record.remaining_amount_eur
-    if investment <= 0:
-        return None
-    return min(max(record.cumulative_return_eur / investment * 100, 0), 100)

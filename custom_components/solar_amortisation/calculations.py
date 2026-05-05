@@ -74,7 +74,10 @@ def calculate_energy_deltas(
     """Calculate positive energy deltas between two absolute meter snapshots."""
 
     return EnergyDeltas(
-        pv_generation_kwh=max(current.pv_generation_kwh - previous.pv_generation_kwh, 0),
+        pv_generation_kwh=max(
+            current.pv_generation_kwh - previous.pv_generation_kwh,
+            0,
+        ),
         grid_import_kwh=max(current.grid_import_kwh - previous.grid_import_kwh, 0),
         grid_export_kwh=max(current.grid_export_kwh - previous.grid_export_kwh, 0),
     )
@@ -124,7 +127,12 @@ def calculate_forecasts(
     """Calculate remaining amortisation days from rolling averages."""
 
     if remaining_amount_eur <= 0:
-        return Forecasts(days_30=0, days_365=0, days_since_start=0, recommended="paid_off")
+        return Forecasts(
+            days_30=0,
+            days_365=0,
+            days_since_start=0,
+            recommended="paid_off",
+        )
 
     sorted_records = sorted(records, key=lambda item: item.record_date)
     days_30 = _forecast_for_records(sorted_records[-30:], remaining_amount_eur)
