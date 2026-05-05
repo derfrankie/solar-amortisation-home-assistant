@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import date, timedelta
+from zoneinfo import ZoneInfo
 
 from custom_components.solar_amortisation.calculations import (
     calculate_backfill_records,
@@ -254,6 +255,68 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(deltas[date(2026, 5, 1)].pv_generation_kwh, 8)
         self.assertEqual(deltas[date(2026, 5, 2)].pv_generation_kwh, 15)
         self.assertEqual(len(deltas), 2)
+
+    def test_build_daily_deltas_prefers_change_and_converts_wh(self) -> None:
+        rows = {
+            "sensor.pv_kwh": [
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 110, "change": 10},
+            ],
+            "sensor.pv_wh": [
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 5000, "change": 5000},
+            ],
+            "sensor.import": [
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 3000, "change": 3000},
+            ],
+            "sensor.export": [
+                {"start": "2026-05-01T00:00:00+00:00", "sum": 2000, "change": 2000},
+            ],
+        }
+
+        deltas = build_daily_deltas_from_statistics(
+            rows=rows,
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 1),
+            pv_generation_entities=("sensor.pv_kwh", "sensor.pv_wh"),
+            grid_import_entity="sensor.import",
+            grid_export_entity="sensor.export",
+            entity_units={
+                "sensor.pv_kwh": "kWh",
+                "sensor.pv_wh": "Wh",
+                "sensor.import": "Wh",
+                "sensor.export": "Wh",
+            },
+        )
+
+        self.assertEqual(deltas[date(2026, 5, 1)].pv_generation_kwh, 15)
+        self.assertEqual(deltas[date(2026, 5, 1)].grid_import_kwh, 3)
+        self.assertEqual(deltas[date(2026, 5, 1)].grid_export_kwh, 2)
+
+    def test_build_daily_deltas_handles_epoch_millis_as_local_day(self) -> None:
+        rows = {
+            "sensor.pv": [
+                {"start": 1777586400000, "change": 10},
+            ],
+            "sensor.import": [
+                {"start": 1777586400000, "change": 3},
+            ],
+            "sensor.export": [
+                {"start": 1777586400000, "change": 2},
+            ],
+        }
+
+        deltas = build_daily_deltas_from_statistics(
+            rows=rows,
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 1),
+            pv_generation_entities=("sensor.pv",),
+            grid_import_entity="sensor.import",
+            grid_export_entity="sensor.export",
+            local_timezone=ZoneInfo("Europe/Berlin"),
+        )
+
+        self.assertEqual(deltas[date(2026, 5, 1)].pv_generation_kwh, 10)
+        self.assertEqual(deltas[date(2026, 5, 1)].grid_import_kwh, 3)
+        self.assertEqual(deltas[date(2026, 5, 1)].grid_export_kwh, 2)
 
 
 def _record(record_date: date, daily_return: float) -> DailyRecord:

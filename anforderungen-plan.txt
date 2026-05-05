@@ -41,3 +41,7 @@ solaranlage
 sensor.solarflow_2400_pro_aggr_solar,sensor.hoymiles_inverter_port_1_dc_total_energy,sensor.hoymiles_inverter_port_2_dc_total_energy,sensor.hoymiles_inverter_port_3_dc_total_energy,sensor.hoymiles_inverter_port_4_dc_total_energy
 
 https://ha.neulichedl.org/config/integrations/integration/solar_amortisation
+
+
+
+https://ha-mcp.neulichedl.org/private_UcE-k__B3N65stTsNlxv3g

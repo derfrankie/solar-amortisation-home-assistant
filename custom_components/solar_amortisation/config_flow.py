@@ -9,6 +9,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_DESCRIPTION,
@@ -135,7 +136,7 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
             ): _sensor_entity_selector(),
             vol.Required(
                 CONF_PV_GENERATION_ENTITIES,
-                default=_entities_as_text(
+                default=_normalize_pv_entities(
                     defaults.get(CONF_PV_GENERATION_ENTITIES, ""),
                 ),
             ): _sensor_entities_selector(),
@@ -170,28 +171,37 @@ def _price_selector() -> type:
     return str
 
 
-def _date_selector() -> type:
-    return str
+def _date_selector() -> selector.DateSelector:
+    return selector.DateSelector()
 
 
-def _sensor_entity_selector() -> type:
-    return str
+def _sensor_entity_selector() -> selector.EntitySelector:
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(
+            filter=selector.EntityFilterSelectorConfig(
+                domain="sensor",
+                device_class="energy",
+            ),
+        ),
+    )
 
 
-def _sensor_entities_selector() -> type:
-    return str
+def _sensor_entities_selector() -> selector.EntitySelector:
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(
+            filter=selector.EntityFilterSelectorConfig(
+                domain="sensor",
+                device_class="energy",
+            ),
+            multiple=True,
+        ),
+    )
 
 
 def _normalize_pv_entities(value: list[str] | str) -> list[str]:
     if isinstance(value, str):
         return [entity.strip() for entity in value.split(",") if entity.strip()]
-    return value
-
-
-def _entities_as_text(value: list[str] | str) -> str:
-    if isinstance(value, str):
-        return value
-    return ",".join(value)
+    return [str(entity).strip() for entity in value if str(entity).strip()]
 
 
 def _as_text(value: Any) -> str:

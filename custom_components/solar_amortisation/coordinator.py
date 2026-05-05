@@ -295,16 +295,16 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         unavailable_entities: list[str] = []
         pv_values = []
         for entity_id in config.pv_generation_entities:
-            value = self._state_as_float(entity_id)
+            value = self._state_as_kwh(entity_id)
             if value is None:
                 unavailable_entities.append(entity_id)
             pv_values.append(value)
 
-        grid_import = self._state_as_float(config.grid_import_entity)
+        grid_import = self._state_as_kwh(config.grid_import_entity)
         if grid_import is None:
             unavailable_entities.append(config.grid_import_entity)
 
-        grid_export = self._state_as_float(config.grid_export_entity)
+        grid_export = self._state_as_kwh(config.grid_export_entity)
         if grid_export is None:
             unavailable_entities.append(config.grid_export_entity)
 
@@ -319,13 +319,13 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             grid_export_kwh=grid_export,
         ), []
 
-    def _state_as_float(self, entity_id: str) -> float | None:
+    def _state_as_kwh(self, entity_id: str) -> float | None:
         state = self.hass.states.get(entity_id)
         if state is None or state.state in {"unknown", "unavailable"}:
             return None
 
         try:
-            return float(state.state)
+            value = float(state.state)
         except ValueError:
             _LOGGER.debug(
                 "Entity %s has a non-numeric state: %s",
@@ -333,6 +333,13 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 state.state,
             )
             return None
+
+        unit = str(state.attributes.get("unit_of_measurement", "")).strip().lower()
+        if unit == "wh":
+            return value / 1000
+        if unit == "mwh":
+            return value * 1000
+        return value
 
     @callback
     def _handle_daily_tick(self, _now: Any) -> None:
