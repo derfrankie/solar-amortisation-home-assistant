@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from .const import DOMAIN
 
-PLATFORMS = ["sensor"]
-
 
 async def async_setup(hass, config) -> bool:
     """Set up the Solar Amortisation integration."""
@@ -19,6 +17,7 @@ async def async_setup_entry(hass, entry) -> bool:
 
     from .coordinator import SolarAmortisationCoordinator
     from .storage import DailyRecordStore
+    from homeassistant.const import Platform
 
     domain_data = hass.data.setdefault(DOMAIN, {})
     store = domain_data.get("store")
@@ -32,14 +31,16 @@ async def async_setup_entry(hass, entry) -> bool:
     domain_data[entry.entry_id] = coordinator
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
     return True
 
 
 async def async_unload_entry(hass, entry) -> bool:
     """Unload a config entry."""
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    from homeassistant.const import Platform
+
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok

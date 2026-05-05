@@ -10,7 +10,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_time_change
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .calculations import (
@@ -46,9 +46,10 @@ class SiteStatus:
     """Current published state for a site."""
 
     latest_record: DailyRecord | None
-    current_snapshot: MeterSnapshot
+    current_snapshot: MeterSnapshot | None
     days_since_start: int
     forecasts: Forecasts
+    setup_issue: str | None = None
 
 
 class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
@@ -64,6 +65,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             hass,
             logger=_LOGGER,
             name=f"{DOMAIN}_{entry.entry_id}",
+            config_entry=entry,
+            always_update=False,
         )
         self.entry = entry
         self.store = store
@@ -86,11 +89,13 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             site_id=self.entry.entry_id,
             name=data[CONF_SITE_NAME],
             description=data.get(CONF_DESCRIPTION, ""),
-            investment_amount=float(data[CONF_INVESTMENT_AMOUNT]),
+            investment_amount=_parse_decimal(data[CONF_INVESTMENT_AMOUNT]),
             start_date=date.fromisoformat(data[CONF_START_DATE]),
             grid_import_entity=data[CONF_GRID_IMPORT_ENTITY],
             grid_export_entity=data[CONF_GRID_EXPORT_ENTITY],
-            pv_generation_entities=tuple(data[CONF_PV_GENERATION_ENTITIES]),
+            pv_generation_entities=tuple(
+                _normalize_entities(data[CONF_PV_GENERATION_ENTITIES])
+            ),
             electricity_prices=(),
             feed_in_tariffs=(),
         )
@@ -105,7 +110,10 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
 
         await self._async_backfill_if_needed(config, current_date)
 
-        if previous_snapshot is None:
+        setup_issue = None
+        if current_snapshot is None:
+            setup_issue = "One or more configured energy entities are not available"
+        elif previous_snapshot is None:
             await self.store.async_set_snapshot(current_snapshot)
         elif previous_snapshot.snapshot_date < current_date:
             await self._async_rollup(config, previous_snapshot, current_snapshot)
@@ -126,6 +134,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 records=records,
                 remaining_amount_eur=remaining,
             ),
+            setup_issue=setup_issue,
         )
 
     async def _async_rollup(
@@ -152,8 +161,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             record_date=record_date,
             investment_amount=config.investment_amount,
             deltas=deltas,
-            electricity_price_eur_kwh=float(data[CONF_ELECTRICITY_PRICE]),
-            feed_in_tariff_eur_kwh=float(data.get(CONF_FEED_IN_TARIFF, 0)),
+            electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
+            feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
             previous_records=previous_records,
         )
         await self.store.async_upsert(record)
@@ -194,8 +203,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             end_date=end_date,
             investment_amount=config.investment_amount,
             daily_deltas=daily_deltas,
-            electricity_price_eur_kwh=float(data[CONF_ELECTRICITY_PRICE]),
-            feed_in_tariff_eur_kwh=float(data.get(CONF_FEED_IN_TARIFF, 0)),
+            electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
+            feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
             previous_records=[],
         )
         await self.store.async_upsert_many(backfilled)
@@ -204,30 +213,55 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         self,
         config: SiteConfig,
         snapshot_date: date,
-    ) -> MeterSnapshot:
+    ) -> MeterSnapshot | None:
+        pv_values = [
+            self._state_as_float(entity_id)
+            for entity_id in config.pv_generation_entities
+        ]
+        grid_import = self._state_as_float(config.grid_import_entity)
+        grid_export = self._state_as_float(config.grid_export_entity)
+
+        if None in pv_values or grid_import is None or grid_export is None:
+            return None
+
         return MeterSnapshot(
             site_id=config.site_id,
             snapshot_date=snapshot_date,
-            pv_generation_kwh=sum(
-                self._state_as_float(entity_id)
-                for entity_id in config.pv_generation_entities
-            ),
-            grid_import_kwh=self._state_as_float(config.grid_import_entity),
-            grid_export_kwh=self._state_as_float(config.grid_export_entity),
+            pv_generation_kwh=sum(value for value in pv_values if value is not None),
+            grid_import_kwh=grid_import,
+            grid_export_kwh=grid_export,
         )
 
-    def _state_as_float(self, entity_id: str) -> float:
+    def _state_as_float(self, entity_id: str) -> float | None:
         state = self.hass.states.get(entity_id)
         if state is None or state.state in {"unknown", "unavailable"}:
-            msg = f"Entity {entity_id} is not available"
-            raise UpdateFailed(msg)
+            _LOGGER.warning("Entity %s is not available", entity_id)
+            return None
 
         try:
             return float(state.state)
-        except ValueError as err:
-            msg = f"Entity {entity_id} has a non-numeric state: {state.state}"
-            raise UpdateFailed(msg) from err
+        except ValueError:
+            _LOGGER.warning("Entity %s has a non-numeric state: %s", entity_id, state.state)
+            return None
 
     @callback
     def _handle_daily_tick(self, _now: Any) -> None:
         self.hass.async_create_task(self.async_request_refresh())
+
+
+def _parse_decimal(value: Any) -> float:
+    if isinstance(value, int | float):
+        return float(value)
+
+    normalized = str(value).strip().replace(" ", "")
+    if "," in normalized and "." in normalized:
+        normalized = normalized.replace(".", "").replace(",", ".")
+    else:
+        normalized = normalized.replace(",", ".")
+    return float(normalized)
+
+
+def _normalize_entities(value: str | list[str] | tuple[str, ...]) -> list[str]:
+    if isinstance(value, str):
+        return [entity.strip() for entity in value.split(",") if entity.strip()]
+    return [str(entity).strip() for entity in value if str(entity).strip()]

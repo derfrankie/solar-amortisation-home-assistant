@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.components.sensor import (
-    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
@@ -39,7 +38,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="daily_return",
         translation_key="daily_return",
         native_unit_of_measurement=EUR,
-        device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "daily_return_eur"),
@@ -48,7 +46,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="cumulative_return",
         translation_key="cumulative_return",
         native_unit_of_measurement=EUR,
-        device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "cumulative_return_eur"),
@@ -57,7 +54,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="remaining_amount",
         translation_key="remaining_amount",
         native_unit_of_measurement=EUR,
-        device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "remaining_amount_eur"),
@@ -97,8 +93,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="pv_generation_today",
         translation_key="pv_generation_today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "pv_generation_kwh"),
     ),
@@ -106,8 +101,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="self_consumed_pv_today",
         translation_key="self_consumed_pv_today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "self_consumed_pv_kwh"),
     ),
@@ -115,8 +109,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="grid_import_today",
         translation_key="grid_import_today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_import_kwh"),
     ),
@@ -124,8 +117,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         key="grid_export_today",
         translation_key="grid_export_today",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_export_kwh"),
     ),
@@ -185,6 +177,7 @@ class SolarAmortisationSensor(
     ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
+        self._attr_has_entity_name = True
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.entry.entry_id)},
@@ -215,6 +208,7 @@ class SolarAmortisationSensor(
                 else None
             ),
             "recommended_forecast": self.coordinator.data.forecasts.recommended,
+            "setup_issue": self.coordinator.data.setup_issue,
         }
         if self.entity_description.extra_attrs_fn is not None:
             attrs.update(self.entity_description.extra_attrs_fn(self.coordinator.data))
