@@ -44,8 +44,8 @@
   },
   "entity": {
     "sensor": {
-      "daily_return": {
-        "name": "Tagesertrag"
+      "daily_return_yesterday": {
+        "name": "Tagesertrag gestern"
       },
       "cumulative_return": {
         "name": "Kumulierter Ertrag"
@@ -65,23 +65,23 @@
       "forecast_days_since_start": {
         "name": "Resttage seit Start"
       },
-      "pv_generation_today": {
-        "name": "PV-Erzeugung heute"
+      "pv_generation_yesterday": {
+        "name": "PV-Erzeugung gestern"
       },
-      "self_consumed_pv_today": {
-        "name": "PV-Eigenverbrauch heute"
+      "self_consumed_pv_yesterday": {
+        "name": "PV-Eigenverbrauch gestern"
       },
-      "grid_import_today": {
-        "name": "Netzbezug heute"
+      "grid_import_yesterday": {
+        "name": "Netzbezug gestern"
       },
-      "grid_export_today": {
-        "name": "Netzeinspeisung heute"
+      "grid_export_yesterday": {
+        "name": "Netzeinspeisung gestern"
       },
-      "electricity_price_today": {
-        "name": "Strompreis heute"
+      "electricity_price_yesterday": {
+        "name": "Strompreis gestern"
       },
-      "feed_in_tariff_today": {
-        "name": "Einspeiseverguetung heute"
+      "feed_in_tariff_yesterday": {
+        "name": "Einspeiseverguetung gestern"
       },
       "amortisation_progress": {
         "name": "Amortisationsfortschritt"

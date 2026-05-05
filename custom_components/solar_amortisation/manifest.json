@@ -1,6 +1,6 @@
 {
   "domain": "solar_amortisation",
-  "name": "Solar Amortisation",
+  "name": "Simple Solar Amortisation",
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://github.com/custom-components/solar-amortisation-ha",

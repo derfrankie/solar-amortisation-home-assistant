@@ -1,4 +1,4 @@
-# Solar Amortisation for Home Assistant
+# Simple Solar Amortisation for Home Assistant
 
 Custom Home Assistant integration for tracking solar amortisation per site.
 

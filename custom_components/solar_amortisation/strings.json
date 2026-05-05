@@ -44,8 +44,8 @@
   },
   "entity": {
     "sensor": {
-      "daily_return": {
-        "name": "Daily return"
+      "daily_return_yesterday": {
+        "name": "Daily return yesterday"
       },
       "cumulative_return": {
         "name": "Cumulative return"
@@ -65,23 +65,23 @@
       "forecast_days_since_start": {
         "name": "Forecast days since start"
       },
-      "pv_generation_today": {
-        "name": "PV generation today"
+      "pv_generation_yesterday": {
+        "name": "PV generation yesterday"
       },
-      "self_consumed_pv_today": {
-        "name": "Self-consumed PV today"
+      "self_consumed_pv_yesterday": {
+        "name": "Self-consumed PV yesterday"
       },
-      "grid_import_today": {
-        "name": "Grid import today"
+      "grid_import_yesterday": {
+        "name": "Grid import yesterday"
       },
-      "grid_export_today": {
-        "name": "Grid export today"
+      "grid_export_yesterday": {
+        "name": "Grid export yesterday"
       },
-      "electricity_price_today": {
-        "name": "Electricity price today"
+      "electricity_price_yesterday": {
+        "name": "Electricity price yesterday"
       },
-      "feed_in_tariff_today": {
-        "name": "Feed-in tariff today"
+      "feed_in_tariff_yesterday": {
+        "name": "Feed-in tariff yesterday"
       },
       "amortisation_progress": {
         "name": "Amortisation progress"
