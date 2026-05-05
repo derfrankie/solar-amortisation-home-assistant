@@ -52,8 +52,6 @@ class SolarAmortisationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_START_DATE] = "invalid_date"
 
             if not errors:
-                await self.async_set_unique_id(user_input[CONF_SITE_NAME].lower())
-                self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=user_input[CONF_SITE_NAME],
                     data=_normalize_input(user_input),
@@ -80,7 +78,7 @@ def _site_schema() -> vol.Schema:
             vol.Required(CONF_GRID_EXPORT_ENTITY): _sensor_entity_selector(),
             vol.Required(CONF_PV_GENERATION_ENTITIES): _sensor_entities_selector(),
             vol.Required(CONF_ELECTRICITY_PRICE): _price_selector(),
-            vol.Optional(CONF_FEED_IN_TARIFF, default=0): _price_selector(),
+            vol.Required(CONF_FEED_IN_TARIFF, default="0"): _price_selector(),
         }
     )
 
@@ -121,7 +119,7 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
             ): str,
             vol.Required(
                 CONF_INVESTMENT_AMOUNT,
-                default=defaults.get(CONF_INVESTMENT_AMOUNT, 0),
+                default=_as_text(defaults.get(CONF_INVESTMENT_AMOUNT, "")),
             ): _money_selector(),
             vol.Required(
                 CONF_START_DATE,
@@ -137,15 +135,15 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
             ): _sensor_entity_selector(),
             vol.Required(
                 CONF_PV_GENERATION_ENTITIES,
-                default=defaults.get(CONF_PV_GENERATION_ENTITIES, []),
+                default=_entities_as_text(defaults.get(CONF_PV_GENERATION_ENTITIES, "")),
             ): _sensor_entities_selector(),
             vol.Required(
                 CONF_ELECTRICITY_PRICE,
-                default=defaults.get(CONF_ELECTRICITY_PRICE, 0),
+                default=_as_text(defaults.get(CONF_ELECTRICITY_PRICE, "")),
             ): _price_selector(),
-            vol.Optional(
+            vol.Required(
                 CONF_FEED_IN_TARIFF,
-                default=defaults.get(CONF_FEED_IN_TARIFF, 0),
+                default=_as_text(defaults.get(CONF_FEED_IN_TARIFF, 0)),
             ): _price_selector(),
         }
     )
@@ -186,6 +184,16 @@ def _normalize_pv_entities(value: list[str] | str) -> list[str]:
     if isinstance(value, str):
         return [entity.strip() for entity in value.split(",") if entity.strip()]
     return value
+
+
+def _entities_as_text(value: list[str] | str) -> str:
+    if isinstance(value, str):
+        return value
+    return ",".join(value)
+
+
+def _as_text(value: Any) -> str:
+    return str(value)
 
 
 def _parse_decimal(value: Any) -> float:
