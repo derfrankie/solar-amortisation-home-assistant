@@ -1,29 +1,93 @@
-# Simple Solar Amortisation for Home Assistant
+# Simple Solar Amortisation
 
-Custom Home Assistant integration for tracking solar amortisation per site.
+[![HACS Custom Repository](https://img.shields.io/badge/HACS-Custom%20Repository-41BDF5.svg)](https://github.com/custom-components/hacs)
+[![HACS Supported](https://img.shields.io/badge/HACS-Supported-03a9f4)](https://github.com/custom-components/hacs)
 
-The integration models one site with one shared grid connection and multiple PV
-generation entities. This keeps the accounting honest for installations with a
-battery or multiple inverters, where the exact economic contribution of a single
-PV array cannot be separated from site-level import and export meters.
+Track how quickly a solar installation pays for itself in Home Assistant.
 
-## Current scope
+This custom integration calculates daily return, cumulative return, remaining investment, and payoff forecasts from your existing Home Assistant energy sensors.
 
-- Configure one or more sites.
-- Track investment amount and start date.
-- Use total energy entities for grid import, grid export, and PV generation.
-- Store the electricity price and feed-in tariff used for each day.
-- Backfill historical daily records from Home Assistant long-term statistics
-  when the configured start date is in the past.
-- Publish sensors for daily return, cumulative return, remaining amount, days
-  since start, and forecast days based on 30-day, 365-day, and since-start
-  averages.
+## What it does
 
-When historical long-term statistics are available, the integration creates
-daily records from the configured start date through yesterday during the first
-setup. The configured electricity price and feed-in tariff are stored on every
-backfilled day. After that, the integration keeps a daily meter snapshot and
-continues forward from the next daily rollup.
+- Supports one or more configured sites.
+- Uses one shared grid import meter, one shared grid export meter, and one or more PV generation meters per site.
+- Stores the configured electricity price and feed-in tariff per recorded day.
+- Backfills historical daily records from Home Assistant long-term statistics when your start date is in the past.
+- Creates sensors for yesterday's return, cumulative return, remaining amount, amortisation progress, and multiple forecast windows.
+
+## Requirements
+
+Before installing, make sure you already have:
+
+- Home Assistant with the recorder enabled.
+- Energy sensors with `device_class: energy`.
+- Total or increasing energy entities for:
+  - Grid import
+  - Grid export
+  - One or more PV generation sources
+- Historical long-term statistics available if you want automatic backfill for past dates.
+
+The integration accepts energy values in `Wh`, `kWh`, or `MWh`.
+
+## Installation
+
+### HACS
+
+This integration is installed through HACS as a custom repository.
+
+[![Open your Home Assistant instance and add this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=custom-components&repository=solar-amortisation-ha&category=integration)
+
+1. Open HACS in Home Assistant.
+2. Go to `Integrations`.
+3. Open the menu in the top-right corner and select `Custom repositories`.
+4. Add `https://github.com/custom-components/solar-amortisation-ha` as an `Integration`.
+5. Search for `Solar Amortisation`.
+6. Open the repository and click `Download`.
+7. Restart Home Assistant.
+
+### Manual
+
+1. Copy `custom_components/solar_amortisation` into your Home Assistant `custom_components` directory.
+2. Restart Home Assistant.
+
+## Configuration
+
+[![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=solar_amortisation)
+
+1. Go to `Settings` > `Devices & services`.
+2. Click `Add Integration`.
+3. Search for `Simple Solar Amortisation`.
+4. Fill in the site details:
+   - `Site name`
+   - `Investment amount`
+   - `Start date`
+   - `Total grid import entity`
+   - `Total grid export entity`
+   - `Total PV generation entities`
+   - `Electricity price`
+   - `Feed-in tariff`
+5. Submit the form.
+
+You can create multiple entries if you want to track multiple sites.
+
+## Created sensors
+
+For each configured site, the integration creates sensors for:
+
+- Daily return yesterday
+- Cumulative return
+- Remaining amount
+- Days since start
+- Forecast days based on 30-day average
+- Forecast days based on 365-day average
+- Forecast days based on since-start average
+- PV generation yesterday
+- Self-consumed PV yesterday
+- Grid import yesterday
+- Grid export yesterday
+- Electricity price yesterday
+- Feed-in tariff yesterday
+- Amortisation progress
 
 ## Accounting model
 
@@ -40,20 +104,11 @@ daily_return = daily_savings + daily_revenue
 remaining_amount = investment_amount - cumulative_return
 ```
 
-Grid import is stored for analysis and future refinements, but the site-level
-return is derived from avoided import and export revenue.
+Grid import is stored for reporting and future analysis, but the current return model is based on avoided import plus export revenue.
 
-## Installation
+## Notes
 
-This repository is intended to be installed as a HACS custom repository.
-
-1. Add this repository to HACS as an integration custom repository.
-2. Install `Solar Amortisation`.
-3. Restart Home Assistant.
-4. Add the integration from Settings > Devices & services.
-
-## Development
-
-```bash
-python3 -m unittest discover -s tests
-```
+- Backfill only works when Home Assistant already has recorder statistics for the selected entities.
+- If the selected entities are unavailable, the integration will keep the setup but the sensors will show a setup issue until the entities return.
+- Electricity price and feed-in tariff are currently configured as fixed values in the integration options. When changed, future daily records use the new values.
+- The integration is designed around a site-level view. If you have multiple inverters or a battery on one shared connection, configure them as one site and sum all PV generation entities there.
