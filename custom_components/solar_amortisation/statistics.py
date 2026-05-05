@@ -50,6 +50,42 @@ class HistoricalStatisticsReader:
             grid_export_entity=grid_export_entity,
         )
 
+    async def async_get_daily_delta_result(
+        self,
+        *,
+        start_date: date,
+        end_date: date,
+        pv_generation_entities: Iterable[str],
+        grid_import_entity: str,
+        grid_export_entity: str,
+    ) -> tuple[dict[date, EnergyDeltas], dict[str, int]]:
+        """Return historical daily deltas and row counts for diagnostics."""
+
+        statistic_ids = [
+            *pv_generation_entities,
+            grid_import_entity,
+            grid_export_entity,
+        ]
+        rows = await self._async_fetch_statistics(
+            start_date=start_date,
+            end_date=end_date,
+            statistic_ids=statistic_ids,
+        )
+        return (
+            build_daily_deltas_from_statistics(
+                rows=rows,
+                start_date=start_date,
+                end_date=end_date,
+                pv_generation_entities=tuple(pv_generation_entities),
+                grid_import_entity=grid_import_entity,
+                grid_export_entity=grid_export_entity,
+            ),
+            {
+                statistic_id: len(rows.get(statistic_id, []))
+                for statistic_id in statistic_ids
+            },
+        )
+
     async def _async_fetch_statistics(
         self,
         *,

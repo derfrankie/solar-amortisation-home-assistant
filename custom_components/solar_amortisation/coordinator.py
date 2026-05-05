@@ -42,6 +42,38 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
+class BackfillStatus:
+    """Diagnostic information about the latest historical backfill attempt."""
+
+    attempted: bool = False
+    start_date: date | None = None
+    end_date: date | None = None
+    existing_records: int = 0
+    statistic_rows: dict[str, int] | None = None
+    daily_deltas: int = 0
+    records_created: int = 0
+    error: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+
+        return {
+            "attempted": self.attempted,
+            "start_date": (
+                self.start_date.isoformat() if self.start_date is not None else None
+            ),
+            "end_date": (
+                self.end_date.isoformat() if self.end_date is not None else None
+            ),
+            "existing_records": self.existing_records,
+            "statistic_rows": self.statistic_rows or {},
+            "daily_deltas": self.daily_deltas,
+            "records_created": self.records_created,
+            "error": self.error,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class SiteStatus:
     """Current published state for a site."""
 
@@ -51,6 +83,7 @@ class SiteStatus:
     forecasts: Forecasts
     setup_issue: str | None = None
     unavailable_entities: tuple[str, ...] = ()
+    backfill_status: BackfillStatus = BackfillStatus()
 
 
 class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
@@ -71,6 +104,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         )
         self.entry = entry
         self.store = store
+        self._backfill_status = BackfillStatus()
 
         unsub = async_track_time_change(
             hass,
@@ -148,6 +182,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             ),
             setup_issue=setup_issue,
             unavailable_entities=tuple(unavailable_entities),
+            backfill_status=self._backfill_status,
         )
 
     async def _async_rollup(
@@ -190,23 +225,36 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
 
         records = self.store.records_for_site(config.site_id)
         if records:
+            self._backfill_status = BackfillStatus(
+                existing_records=len(records),
+            )
             return
 
         end_date = current_date - timedelta(days=1)
         if config.start_date > end_date:
+            self._backfill_status = BackfillStatus(
+                start_date=config.start_date,
+                end_date=end_date,
+            )
             return
 
         data = {**self.entry.data, **self.entry.options}
         reader = HistoricalStatisticsReader(self.hass)
         try:
-            daily_deltas = await reader.async_get_daily_deltas(
+            daily_deltas, statistic_rows = await reader.async_get_daily_delta_result(
                 start_date=config.start_date,
                 end_date=end_date,
                 pv_generation_entities=config.pv_generation_entities,
                 grid_import_entity=config.grid_import_entity,
                 grid_export_entity=config.grid_export_entity,
             )
-        except Exception:
+        except Exception as err:
+            self._backfill_status = BackfillStatus(
+                attempted=True,
+                start_date=config.start_date,
+                end_date=end_date,
+                error=str(err),
+            )
             _LOGGER.exception(
                 "Failed to backfill historical solar amortisation records",
             )
@@ -223,6 +271,21 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             previous_records=[],
         )
         await self.store.async_upsert_many(backfilled)
+        self._backfill_status = BackfillStatus(
+            attempted=True,
+            start_date=config.start_date,
+            end_date=end_date,
+            statistic_rows=statistic_rows,
+            daily_deltas=len(daily_deltas),
+            records_created=len(backfilled),
+        )
+        _LOGGER.debug(
+            "Backfill for %s: rows=%s, daily_deltas=%s, records_created=%s",
+            config.name,
+            statistic_rows,
+            len(daily_deltas),
+            len(backfilled),
+        )
 
     def _read_current_snapshot(
         self,
