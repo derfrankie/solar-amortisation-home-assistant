@@ -5,6 +5,14 @@ All notable changes to Solar Amortisation are documented here.
 This project uses GitHub Releases for HACS-visible versions. Keep the release
 notes in GitHub aligned with the matching section in this file.
 
+
+## [0.1.0] - 2026-05-05
+- Inital working integration with correct labels
+- backfill for already running plants
+- bugs might be still there
+- use at own risk
+
+
 ## [0.1.0alpha] - 2026-05-05
 
 ### Added

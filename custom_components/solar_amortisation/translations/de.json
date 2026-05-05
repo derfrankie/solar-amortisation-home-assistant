@@ -1,5 +1,10 @@
 {
   "config": {
+    "entry_type": "Standort",
+    "initiate_flow": {
+      "user": "Standort hinzufügen",
+      "reconfigure": "Standort neu konfigurieren"
+    },
     "step": {
       "user": {
         "title": "Solar-Amortisationsstandort",

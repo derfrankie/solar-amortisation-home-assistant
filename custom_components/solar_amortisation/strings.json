@@ -1,5 +1,10 @@
 {
   "config": {
+    "entry_type": "Site",
+    "initiate_flow": {
+      "user": "Add site",
+      "reconfigure": "Reconfigure site"
+    },
     "step": {
       "user": {
         "title": "Solar amortisation site",
