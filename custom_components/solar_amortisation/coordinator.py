@@ -50,6 +50,7 @@ class SiteStatus:
     days_since_start: int
     forecasts: Forecasts
     setup_issue: str | None = None
+    unavailable_entities: tuple[str, ...] = ()
 
 
 class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
@@ -105,7 +106,10 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
 
         config = self.site_config
         current_date = dt_util.now().date()
-        current_snapshot = self._read_current_snapshot(config, current_date)
+        current_snapshot, unavailable_entities = self._read_current_snapshot(
+            config,
+            current_date,
+        )
         previous_snapshot = self.store.snapshot_for_site(config.site_id)
 
         await self._async_backfill_if_needed(config, current_date)
@@ -113,6 +117,11 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         setup_issue = None
         if current_snapshot is None:
             setup_issue = "One or more configured energy entities are not available"
+            _LOGGER.debug(
+                "Solar amortisation snapshot unavailable for %s: %s",
+                config.name,
+                ", ".join(unavailable_entities),
+            )
         elif previous_snapshot is None:
             await self.store.async_set_snapshot(current_snapshot)
         elif previous_snapshot.snapshot_date < current_date:
@@ -135,6 +144,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 remaining_amount_eur=remaining,
             ),
             setup_issue=setup_issue,
+            unavailable_entities=tuple(unavailable_entities),
         )
 
     async def _async_rollup(
@@ -213,16 +223,25 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         self,
         config: SiteConfig,
         snapshot_date: date,
-    ) -> MeterSnapshot | None:
-        pv_values = [
-            self._state_as_float(entity_id)
-            for entity_id in config.pv_generation_entities
-        ]
+    ) -> tuple[MeterSnapshot | None, list[str]]:
+        unavailable_entities: list[str] = []
+        pv_values = []
+        for entity_id in config.pv_generation_entities:
+            value = self._state_as_float(entity_id)
+            if value is None:
+                unavailable_entities.append(entity_id)
+            pv_values.append(value)
+
         grid_import = self._state_as_float(config.grid_import_entity)
+        if grid_import is None:
+            unavailable_entities.append(config.grid_import_entity)
+
         grid_export = self._state_as_float(config.grid_export_entity)
+        if grid_export is None:
+            unavailable_entities.append(config.grid_export_entity)
 
         if None in pv_values or grid_import is None or grid_export is None:
-            return None
+            return None, unavailable_entities
 
         return MeterSnapshot(
             site_id=config.site_id,
@@ -230,18 +249,21 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             pv_generation_kwh=sum(value for value in pv_values if value is not None),
             grid_import_kwh=grid_import,
             grid_export_kwh=grid_export,
-        )
+        ), []
 
     def _state_as_float(self, entity_id: str) -> float | None:
         state = self.hass.states.get(entity_id)
         if state is None or state.state in {"unknown", "unavailable"}:
-            _LOGGER.warning("Entity %s is not available", entity_id)
             return None
 
         try:
             return float(state.state)
         except ValueError:
-            _LOGGER.warning("Entity %s has a non-numeric state: %s", entity_id, state.state)
+            _LOGGER.debug(
+                "Entity %s has a non-numeric state: %s",
+                entity_id,
+                state.state,
+            )
             return None
 
     @callback

@@ -73,6 +73,7 @@ class HistoricalStatisticsReader:
                     end_time,
                     statistic_ids,
                     "day",
+                    units=None,
                     types={"change", "sum"},
                 )
             except (TypeError, ValueError):
@@ -82,6 +83,7 @@ class HistoricalStatisticsReader:
                     end_time,
                     statistic_ids,
                     "day",
+                    units=None,
                     types={"sum"},
                 )
 

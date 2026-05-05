@@ -209,6 +209,7 @@ class SolarAmortisationSensor(
             ),
             "recommended_forecast": self.coordinator.data.forecasts.recommended,
             "setup_issue": self.coordinator.data.setup_issue,
+            "unavailable_entities": self.coordinator.data.unavailable_entities,
         }
         if self.entity_description.extra_attrs_fn is not None:
             attrs.update(self.entity_description.extra_attrs_fn(self.coordinator.data))

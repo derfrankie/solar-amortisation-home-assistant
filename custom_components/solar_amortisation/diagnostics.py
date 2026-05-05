@@ -31,6 +31,11 @@ async def async_get_config_entry_diagnostics(hass, entry) -> dict[str, Any]:
         },
         "runtime": {
             "setup_issue": setup_issue,
+            "unavailable_entities": (
+                coordinator.data.unavailable_entities
+                if coordinator is not None and coordinator.data is not None
+                else ()
+            ),
             "latest_record": latest_record,
         },
     }
