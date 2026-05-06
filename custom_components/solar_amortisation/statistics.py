@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -270,7 +270,7 @@ def _row_start(row: dict[str, Any]) -> datetime:
             return datetime.min
     if isinstance(start, int | float):
         seconds = start / 1000 if start > 10_000_000_000 else start
-        return datetime.fromtimestamp(seconds, timezone.utc)
+        return datetime.fromtimestamp(seconds, UTC)
     return datetime.min
 
 

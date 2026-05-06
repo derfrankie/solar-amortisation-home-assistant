@@ -13,6 +13,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_DESCRIPTION,
+    DOMAIN,
     CONF_ELECTRICITY_PRICE,
     CONF_FEED_IN_TARIFF,
     CONF_GRID_EXPORT_ENTITY,
@@ -21,7 +22,6 @@ from .const import (
     CONF_PV_GENERATION_ENTITIES,
     CONF_START_DATE,
     CONF_SITE_NAME,
-    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)

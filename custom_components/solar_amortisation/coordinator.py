@@ -147,6 +147,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         previous_snapshot = self.store.snapshot_for_site(config.site_id)
 
         await self._async_backfill_if_needed(config, current_date)
+        await self._async_reconcile_recent_statistics(config, current_date)
 
         setup_issue = None
         if current_snapshot is None:
@@ -215,6 +216,63 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         )
         await self.store.async_upsert(record)
         await self.store.async_set_snapshot(current_snapshot)
+
+    async def _async_reconcile_recent_statistics(
+        self,
+        config: SiteConfig,
+        current_date: date,
+    ) -> None:
+        """Correct recent closed-day records from HA recorder statistics."""
+
+        end_date = current_date - timedelta(days=1)
+        if config.start_date > end_date:
+            return
+
+        records = self.store.records_for_site(config.site_id)
+        if not records:
+            return
+
+        latest_date = records[-1].record_date
+        start_date = max(config.start_date, latest_date - timedelta(days=2))
+        data = {**self.entry.data, **self.entry.options}
+        reader = HistoricalStatisticsReader(self.hass)
+
+        try:
+            daily_deltas = await reader.async_get_daily_deltas(
+                start_date=start_date,
+                end_date=end_date,
+                pv_generation_entities=config.pv_generation_entities,
+                grid_import_entity=config.grid_import_entity,
+                grid_export_entity=config.grid_export_entity,
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Failed to reconcile recent solar amortisation statistics",
+            )
+            return
+
+        if not daily_deltas:
+            return
+
+        previous_records = [
+            record for record in records if record.record_date < start_date
+        ]
+        reconciled = calculate_backfill_records(
+            site_id=config.site_id,
+            start_date=start_date,
+            end_date=end_date,
+            investment_amount=config.investment_amount,
+            daily_deltas=daily_deltas,
+            electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
+            feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
+            previous_records=previous_records,
+        )
+        await self.store.async_upsert_many(reconciled)
+        _LOGGER.debug(
+            "Reconciled %s recent solar amortisation records for %s",
+            len(reconciled),
+            config.name,
+        )
 
     async def _async_backfill_if_needed(
         self,
