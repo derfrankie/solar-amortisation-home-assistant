@@ -23,6 +23,9 @@ from custom_components.solar_amortisation.models import (
 from custom_components.solar_amortisation.statistics import (
     build_daily_deltas_from_statistics,
 )
+from custom_components.solar_amortisation.statistics_importer import (
+    build_measurement_statistics,
+)
 
 
 class CalculationTest(unittest.TestCase):
@@ -317,6 +320,18 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(deltas[date(2026, 5, 1)].pv_generation_kwh, 10)
         self.assertEqual(deltas[date(2026, 5, 1)].grid_import_kwh, 3)
         self.assertEqual(deltas[date(2026, 5, 1)].grid_export_kwh, 2)
+
+    def test_build_measurement_statistics_uses_record_date_midnight(self) -> None:
+        rows = build_measurement_statistics(
+            records=[_record(date(2026, 5, 1), 4.2)],
+            local_timezone=ZoneInfo("Europe/Berlin"),
+            value_fn=lambda record: record.daily_return_eur,
+        )
+
+        self.assertEqual(rows[0]["start"].isoformat(), "2026-05-01T00:00:00+02:00")
+        self.assertEqual(rows[0]["mean"], 4.2)
+        self.assertEqual(rows[0]["min"], 4.2)
+        self.assertEqual(rows[0]["max"], 4.2)
 
 
 def _record(record_date: date, daily_return: float) -> DailyRecord:

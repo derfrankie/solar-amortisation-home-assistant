@@ -10,7 +10,6 @@ from typing import Any
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
-    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfTime
@@ -98,7 +97,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="daily_return_yesterday",
         fallback_name="Daily return yesterday",
         native_unit_of_measurement=EUR,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "daily_return_eur"),
     ),
@@ -107,7 +105,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="cumulative_return",
         fallback_name="Cumulative return",
         native_unit_of_measurement=EUR,
-        state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "cumulative_return_eur"),
     ),
@@ -116,7 +113,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="remaining_amount",
         fallback_name="Remaining amount",
         native_unit_of_measurement=EUR,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "remaining_amount_eur"),
     ),
@@ -125,7 +121,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="days_since_start",
         fallback_name="Days since start",
         native_unit_of_measurement=UnitOfTime.DAYS,
-        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.days_since_start,
     ),
     SolarSensorEntityDescription(
@@ -133,7 +128,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="forecast_days_30",
         fallback_name="Forecast days 30 days",
         native_unit_of_measurement=UnitOfTime.DAYS,
-        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_30,
         extra_attrs_fn=_forecast_attrs,
     ),
@@ -142,7 +136,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="forecast_days_365",
         fallback_name="Forecast days 365 days",
         native_unit_of_measurement=UnitOfTime.DAYS,
-        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_365,
         extra_attrs_fn=_forecast_attrs,
     ),
@@ -151,7 +144,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="forecast_days_since_start",
         fallback_name="Forecast days since start",
         native_unit_of_measurement=UnitOfTime.DAYS,
-        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_since_start,
         extra_attrs_fn=_forecast_attrs,
     ),
@@ -160,7 +152,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="pv_generation_yesterday",
         fallback_name="PV generation yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "pv_generation_kwh"),
     ),
@@ -169,7 +160,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="self_consumed_pv_yesterday",
         fallback_name="Self-consumed PV yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "self_consumed_pv_kwh"),
     ),
@@ -178,7 +168,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="grid_import_yesterday",
         fallback_name="Grid import yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_import_kwh"),
     ),
@@ -187,7 +176,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="grid_export_yesterday",
         fallback_name="Grid export yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_export_kwh"),
     ),
@@ -196,7 +184,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="electricity_price_yesterday",
         fallback_name="Electricity price yesterday",
         native_unit_of_measurement=EUR_PER_KWH,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=4,
         value_fn=lambda status: _latest(status, "electricity_price_eur_kwh"),
     ),
@@ -205,7 +192,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="feed_in_tariff_yesterday",
         fallback_name="Feed-in tariff yesterday",
         native_unit_of_measurement=EUR_PER_KWH,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=4,
         value_fn=lambda status: _latest(status, "feed_in_tariff_eur_kwh"),
     ),
@@ -214,7 +200,6 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="amortisation_progress",
         fallback_name="Amortisation progress",
         native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
         value_fn=_progress,
     ),
@@ -228,7 +213,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Solar Amortisation sensors."""
 
-    coordinator: SolarAmortisationCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SolarAmortisationCoordinator = entry.runtime_data
     async_add_entities(
         SolarAmortisationSensor(coordinator, description)
         for description in SENSOR_DESCRIPTIONS

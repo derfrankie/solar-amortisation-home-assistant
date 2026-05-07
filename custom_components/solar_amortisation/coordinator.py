@@ -34,6 +34,7 @@ from .const import (
 )
 from .models import DailyRecord, Forecasts, MeterSnapshot, SiteConfig
 from .statistics import HistoricalStatisticsReader
+from .statistics_importer import async_import_daily_record_statistics
 from .storage import DailyRecordStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -145,6 +146,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
 
         await self._async_backfill_if_needed(config, current_date)
         await self._async_fill_missing_statistics(config, current_date)
+        await self._async_import_ha_statistics(config)
 
         setup_issue = None
         if current_snapshot is None:
@@ -308,6 +310,24 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             len(backfilled),
         )
 
+    async def _async_import_ha_statistics(self, config: SiteConfig) -> None:
+        """Import stored daily records into HA long-term statistics."""
+
+        try:
+            statistic_ids = _statistic_entity_ids_for_entry(
+                self.hass,
+                self.entry.entry_id,
+            )
+            await async_import_daily_record_statistics(
+                self.hass,
+                records=self.store.records_for_site(config.site_id),
+                statistic_ids=statistic_ids,
+            )
+        except Exception:
+            _LOGGER.exception(
+                "Failed to import solar amortisation long-term statistics",
+            )
+
     def _read_current_snapshot(
         self,
         config: SiteConfig,
@@ -383,3 +403,20 @@ def _normalize_entities(value: str | list[str] | tuple[str, ...]) -> list[str]:
     if isinstance(value, str):
         return [entity.strip() for entity in value.split(",") if entity.strip()]
     return [str(entity).strip() for entity in value if str(entity).strip()]
+
+
+def _statistic_entity_ids_for_entry(hass, entry_id: str) -> dict[str, str]:
+    """Resolve real HA entity_ids for this config entry's statistic sensors."""
+
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    resolved: dict[str, str] = {}
+    for entity_entry in er.async_entries_for_config_entry(registry, entry_id):
+        if entity_entry.domain != "sensor":
+            continue
+        unique_id = entity_entry.unique_id
+        prefix = f"{entry_id}_"
+        if unique_id.startswith(prefix):
+            resolved[unique_id.removeprefix(prefix)] = entity_entry.entity_id
+    return resolved

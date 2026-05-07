@@ -6,15 +6,13 @@ from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
 
-from .const import DOMAIN
-
 TO_REDACT: list[str] = []
 
 
 async def async_get_config_entry_diagnostics(hass, entry) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
 
-    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    coordinator = getattr(entry, "runtime_data", None)
     latest_record = None
     setup_issue = None
     backfill_status = {}
