@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from .models import EnergyDeltas
 
 StatisticRows = Mapping[str, list[dict[str, Any]]]
+STATISTIC_UNITS = {"energy": "kWh"}
 
 
 class HistoricalStatisticsReader:
@@ -37,7 +38,6 @@ class HistoricalStatisticsReader:
             grid_export_entity,
         ]
         local_timezone = self._local_timezone()
-        entity_units = self._entity_units(statistic_ids)
         rows = await self._async_fetch_statistics(
             start_date=start_date,
             end_date=end_date,
@@ -50,7 +50,6 @@ class HistoricalStatisticsReader:
             pv_generation_entities=tuple(pv_generation_entities),
             grid_import_entity=grid_import_entity,
             grid_export_entity=grid_export_entity,
-            entity_units=entity_units,
             local_timezone=local_timezone,
         )
 
@@ -71,7 +70,6 @@ class HistoricalStatisticsReader:
             grid_export_entity,
         ]
         local_timezone = self._local_timezone()
-        entity_units = self._entity_units(statistic_ids)
         rows = await self._async_fetch_statistics(
             start_date=start_date,
             end_date=end_date,
@@ -85,7 +83,6 @@ class HistoricalStatisticsReader:
                 pv_generation_entities=tuple(pv_generation_entities),
                 grid_import_entity=grid_import_entity,
                 grid_export_entity=grid_export_entity,
-                entity_units=entity_units,
                 local_timezone=local_timezone,
             ),
             {
@@ -93,19 +90,6 @@ class HistoricalStatisticsReader:
                 for statistic_id in statistic_ids
             },
         )
-
-    def _entity_units(self, entity_ids: Iterable[str]) -> dict[str, str | None]:
-        """Return current unit metadata for configured energy entities."""
-
-        units: dict[str, str | None] = {}
-        for entity_id in entity_ids:
-            state = self._hass.states.get(entity_id)
-            units[entity_id] = (
-                state.attributes.get("unit_of_measurement")
-                if state is not None
-                else None
-            )
-        return units
 
     def _local_timezone(self) -> tzinfo:
         """Return Home Assistant's configured local timezone."""
@@ -136,7 +120,7 @@ class HistoricalStatisticsReader:
                 end_time,
                 statistic_ids,
                 "day",
-                units=None,
+                units=STATISTIC_UNITS,
                 types={"change", "sum"},
             )
 

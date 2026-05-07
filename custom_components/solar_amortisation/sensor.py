@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -16,6 +17,7 @@ from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import SiteStatus, SolarAmortisationCoordinator
@@ -41,7 +43,43 @@ def _latest(status: SiteStatus, attr: str) -> float | None:
 
 
 def _forecast_attrs(status: SiteStatus) -> dict[str, Any]:
-    return {"recommended_forecast": status.forecasts.recommended}
+    return {
+        "recommended_forecast": status.forecasts.recommended,
+        **_forecast_date_attrs(status),
+    }
+
+
+def _forecast_date_attrs(status: SiteStatus) -> dict[str, str | None]:
+    today = dt_util.now().date()
+    return {
+        "forecast_date_30_days": _date_after(today, status.forecasts.days_30),
+        "forecast_date_365_days": _date_after(today, status.forecasts.days_365),
+        "forecast_date_since_start": _date_after(
+            today,
+            status.forecasts.days_since_start,
+        ),
+        "recommended_forecast_date": _recommended_forecast_date(status, today),
+    }
+
+
+def _recommended_forecast_date(status: SiteStatus, today) -> str | None:
+    match status.forecasts.recommended:
+        case "30_days":
+            return _date_after(today, status.forecasts.days_30)
+        case "365_days":
+            return _date_after(today, status.forecasts.days_365)
+        case "since_start":
+            return _date_after(today, status.forecasts.days_since_start)
+        case "paid_off":
+            return today.isoformat()
+        case _:
+            return None
+
+
+def _date_after(today, days: int | None) -> str | None:
+    if days is None:
+        return None
+    return (today + timedelta(days=days)).isoformat()
 
 
 def _progress(status: SiteStatus) -> float | None:
@@ -244,6 +282,7 @@ class SolarAmortisationSensor(
                 else None
             ),
             "recommended_forecast": self.coordinator.data.forecasts.recommended,
+            **_forecast_date_attrs(self.coordinator.data),
             "setup_issue": self.coordinator.data.setup_issue,
             "unavailable_entities": self.coordinator.data.unavailable_entities,
             "backfill_status": self.coordinator.data.backfill_status.as_dict(),

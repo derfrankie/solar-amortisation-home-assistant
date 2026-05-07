@@ -15,9 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .calculations import (
     calculate_backfill_records,
-    calculate_daily_record,
     calculate_days_since_start,
-    calculate_energy_deltas,
     calculate_forecasts,
 )
 from .const import (
@@ -144,10 +142,9 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             config,
             current_date,
         )
-        previous_snapshot = self.store.snapshot_for_site(config.site_id)
 
         await self._async_backfill_if_needed(config, current_date)
-        await self._async_reconcile_recent_statistics(config, current_date)
+        await self._async_fill_missing_statistics(config, current_date)
 
         setup_issue = None
         if current_snapshot is None:
@@ -157,10 +154,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 config.name,
                 ", ".join(unavailable_entities),
             )
-        elif previous_snapshot is None:
+        else:
             await self.store.async_set_snapshot(current_snapshot)
-        elif previous_snapshot.snapshot_date < current_date:
-            await self._async_rollup(config, previous_snapshot, current_snapshot)
 
         records = self.store.records_for_site(config.site_id)
         latest_record = records[-1] if records else None
@@ -186,43 +181,12 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             backfill_status=self._backfill_status,
         )
 
-    async def _async_rollup(
-        self,
-        config: SiteConfig,
-        previous_snapshot: MeterSnapshot,
-        current_snapshot: MeterSnapshot,
-    ) -> None:
-        """Store one daily accounting record from two meter snapshots."""
-
-        record_date = current_snapshot.snapshot_date - timedelta(days=1)
-        if self.store.has_record(config.site_id, record_date):
-            await self.store.async_set_snapshot(current_snapshot)
-            return
-
-        deltas = calculate_energy_deltas(
-            previous=previous_snapshot,
-            current=current_snapshot,
-        )
-        previous_records = self.store.records_for_site(config.site_id)
-        data = {**self.entry.data, **self.entry.options}
-        record = calculate_daily_record(
-            site_id=config.site_id,
-            record_date=record_date,
-            investment_amount=config.investment_amount,
-            deltas=deltas,
-            electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
-            feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
-            previous_records=previous_records,
-        )
-        await self.store.async_upsert(record)
-        await self.store.async_set_snapshot(current_snapshot)
-
-    async def _async_reconcile_recent_statistics(
+    async def _async_fill_missing_statistics(
         self,
         config: SiteConfig,
         current_date: date,
     ) -> None:
-        """Correct recent closed-day records from HA recorder statistics."""
+        """Create missing closed-day records from HA recorder statistics."""
 
         end_date = current_date - timedelta(days=1)
         if config.start_date > end_date:
@@ -232,8 +196,10 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         if not records:
             return
 
-        latest_date = records[-1].record_date
-        start_date = max(config.start_date, latest_date - timedelta(days=2))
+        start_date = records[-1].record_date + timedelta(days=1)
+        if start_date > end_date:
+            return
+
         data = {**self.entry.data, **self.entry.options}
         reader = HistoricalStatisticsReader(self.hass)
 
@@ -247,17 +213,14 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             )
         except Exception:
             _LOGGER.exception(
-                "Failed to reconcile recent solar amortisation statistics",
+                "Failed to fill missing solar amortisation statistics",
             )
             return
 
         if not daily_deltas:
             return
 
-        previous_records = [
-            record for record in records if record.record_date < start_date
-        ]
-        reconciled = calculate_backfill_records(
+        created = calculate_backfill_records(
             site_id=config.site_id,
             start_date=start_date,
             end_date=end_date,
@@ -265,12 +228,12 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             daily_deltas=daily_deltas,
             electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
             feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
-            previous_records=previous_records,
+            previous_records=records,
         )
-        await self.store.async_upsert_many(reconciled)
+        await self.store.async_upsert_many(created)
         _LOGGER.debug(
-            "Reconciled %s recent solar amortisation records for %s",
-            len(reconciled),
+            "Created %s missing solar amortisation records for %s",
+            len(created),
             config.name,
         )
 
