@@ -124,6 +124,8 @@ async def async_import_daily_record_statistics(
             continue
 
         metadata = {
+            "has_mean": True,
+            "has_sum": False,
             "mean_type": StatisticMeanType.ARITHMETIC,
             "name": None,
             "source": RECORDER_DOMAIN,
