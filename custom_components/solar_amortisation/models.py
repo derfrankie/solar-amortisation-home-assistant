@@ -40,8 +40,10 @@ class SiteConfig:
     grid_import_entity: str
     grid_export_entity: str
     pv_generation_entities: tuple[str, ...]
-    electricity_prices: tuple[PricePeriod, ...]
-    feed_in_tariffs: tuple[PricePeriod, ...]
+    battery_discharge_entities: tuple[str, ...]
+    battery_charge_entities: tuple[str, ...]
+    electricity_price_eur_kwh: float
+    feed_in_tariff_eur_kwh: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +53,8 @@ class EnergyDeltas:
     pv_generation_kwh: float
     grid_import_kwh: float
     grid_export_kwh: float
+    battery_discharge_kwh: float = 0
+    battery_charge_kwh: float = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +66,8 @@ class MeterSnapshot:
     pv_generation_kwh: float
     grid_import_kwh: float
     grid_export_kwh: float
+    battery_discharge_kwh: float = 0
+    battery_charge_kwh: float = 0
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> MeterSnapshot:
@@ -71,6 +77,8 @@ class MeterSnapshot:
             pv_generation_kwh=float(data["pv_generation_kwh"]),
             grid_import_kwh=float(data["grid_import_kwh"]),
             grid_export_kwh=float(data["grid_export_kwh"]),
+            battery_discharge_kwh=float(data.get("battery_discharge_kwh", 0)),
+            battery_charge_kwh=float(data.get("battery_charge_kwh", 0)),
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -80,6 +88,8 @@ class MeterSnapshot:
             "pv_generation_kwh": self.pv_generation_kwh,
             "grid_import_kwh": self.grid_import_kwh,
             "grid_export_kwh": self.grid_export_kwh,
+            "battery_discharge_kwh": self.battery_discharge_kwh,
+            "battery_charge_kwh": self.battery_charge_kwh,
         }
 
 
@@ -93,6 +103,8 @@ class DailyRecord:
     grid_import_kwh: float
     grid_export_kwh: float
     self_consumed_pv_kwh: float
+    battery_discharge_kwh: float
+    battery_charge_kwh: float
     electricity_price_eur_kwh: float
     feed_in_tariff_eur_kwh: float
     daily_savings_eur: float
@@ -110,6 +122,8 @@ class DailyRecord:
             grid_import_kwh=float(data["grid_import_kwh"]),
             grid_export_kwh=float(data["grid_export_kwh"]),
             self_consumed_pv_kwh=float(data["self_consumed_pv_kwh"]),
+            battery_discharge_kwh=float(data.get("battery_discharge_kwh", 0)),
+            battery_charge_kwh=float(data.get("battery_charge_kwh", 0)),
             electricity_price_eur_kwh=float(data["electricity_price_eur_kwh"]),
             feed_in_tariff_eur_kwh=float(data["feed_in_tariff_eur_kwh"]),
             daily_savings_eur=float(data["daily_savings_eur"]),
@@ -127,6 +141,8 @@ class DailyRecord:
             "grid_import_kwh": self.grid_import_kwh,
             "grid_export_kwh": self.grid_export_kwh,
             "self_consumed_pv_kwh": self.self_consumed_pv_kwh,
+            "battery_discharge_kwh": self.battery_discharge_kwh,
+            "battery_charge_kwh": self.battery_charge_kwh,
             "electricity_price_eur_kwh": self.electricity_price_eur_kwh,
             "feed_in_tariff_eur_kwh": self.feed_in_tariff_eur_kwh,
             "daily_savings_eur": self.daily_savings_eur,

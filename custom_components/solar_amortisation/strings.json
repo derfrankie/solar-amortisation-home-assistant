@@ -8,22 +8,27 @@
     "step": {
       "user": {
         "title": "Solar amortisation site",
-        "description": "Configure one site with shared grid meters and one or more PV generation entities.",
+        "description": "Configure one site. The integration can autodiscover grid, solar, battery, and price sources from the Energy dashboard, with manual overrides as fallback.",
         "data": {
           "site_name": "Site name",
           "description": "Description",
           "investment_amount": "Investment amount",
           "start_date": "Start date",
+          "use_energy_dashboard": "Use Energy dashboard configuration",
           "grid_import_entity": "Total grid import entity",
           "grid_export_entity": "Total grid export entity",
           "pv_generation_entities": "Total PV generation entities",
+          "battery_discharge_entities": "Battery discharge entities",
+          "battery_charge_entities": "Battery charge entities",
           "electricity_price": "Electricity price",
           "feed_in_tariff": "Feed-in tariff"
         }
       }
     },
     "error": {
-      "invalid_date": "Use YYYY-MM-DD."
+      "invalid_date": "Use YYYY-MM-DD.",
+      "invalid_number": "Use a valid number.",
+      "required": "This field is required."
     },
     "abort": {
       "already_configured": "This site is already configured."
@@ -38,9 +43,12 @@
           "description": "Description",
           "investment_amount": "Investment amount",
           "start_date": "Start date",
+          "use_energy_dashboard": "Use Energy dashboard configuration",
           "grid_import_entity": "Total grid import entity",
           "grid_export_entity": "Total grid export entity",
           "pv_generation_entities": "Total PV generation entities",
+          "battery_discharge_entities": "Battery discharge entities",
+          "battery_charge_entities": "Battery charge entities",
           "electricity_price": "Electricity price",
           "feed_in_tariff": "Feed-in tariff"
         }
@@ -74,7 +82,7 @@
         "name": "PV generation yesterday"
       },
       "self_consumed_pv_yesterday": {
-        "name": "Self-consumed PV yesterday"
+        "name": "Locally covered usage yesterday"
       },
       "grid_import_yesterday": {
         "name": "Grid import yesterday"

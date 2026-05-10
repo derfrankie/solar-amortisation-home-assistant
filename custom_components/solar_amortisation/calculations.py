@@ -34,8 +34,14 @@ def calculate_daily_record(
 ) -> DailyRecord:
     """Calculate and freeze one daily accounting record."""
 
-    self_consumed_pv_kwh = max(deltas.pv_generation_kwh - deltas.grid_export_kwh, 0)
-    daily_savings_eur = self_consumed_pv_kwh * electricity_price_eur_kwh
+    local_energy_used_kwh = max(
+        deltas.pv_generation_kwh
+        + deltas.battery_discharge_kwh
+        - deltas.grid_export_kwh
+        - deltas.battery_charge_kwh,
+        0,
+    )
+    daily_savings_eur = local_energy_used_kwh * electricity_price_eur_kwh
     daily_revenue_eur = deltas.grid_export_kwh * feed_in_tariff_eur_kwh
     daily_return_eur = daily_savings_eur + daily_revenue_eur
 
@@ -49,7 +55,9 @@ def calculate_daily_record(
         pv_generation_kwh=round(deltas.pv_generation_kwh, 6),
         grid_import_kwh=round(deltas.grid_import_kwh, 6),
         grid_export_kwh=round(deltas.grid_export_kwh, 6),
-        self_consumed_pv_kwh=round(self_consumed_pv_kwh, 6),
+        self_consumed_pv_kwh=round(local_energy_used_kwh, 6),
+        battery_discharge_kwh=round(deltas.battery_discharge_kwh, 6),
+        battery_charge_kwh=round(deltas.battery_charge_kwh, 6),
         electricity_price_eur_kwh=round(electricity_price_eur_kwh, 6),
         feed_in_tariff_eur_kwh=round(feed_in_tariff_eur_kwh, 6),
         daily_savings_eur=round(daily_savings_eur, 6),
@@ -80,6 +88,14 @@ def calculate_energy_deltas(
         ),
         grid_import_kwh=max(current.grid_import_kwh - previous.grid_import_kwh, 0),
         grid_export_kwh=max(current.grid_export_kwh - previous.grid_export_kwh, 0),
+        battery_discharge_kwh=max(
+            current.battery_discharge_kwh - previous.battery_discharge_kwh,
+            0,
+        ),
+        battery_charge_kwh=max(
+            current.battery_charge_kwh - previous.battery_charge_kwh,
+            0,
+        ),
     )
 
 

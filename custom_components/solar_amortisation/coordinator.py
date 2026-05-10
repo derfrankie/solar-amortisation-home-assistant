@@ -19,6 +19,8 @@ from .calculations import (
     calculate_forecasts,
 )
 from .const import (
+    CONF_BATTERY_CHARGE_ENTITIES,
+    CONF_BATTERY_DISCHARGE_ENTITIES,
     CONF_DESCRIPTION,
     CONF_ELECTRICITY_PRICE,
     CONF_FEED_IN_TARIFF,
@@ -28,10 +30,12 @@ from .const import (
     CONF_PV_GENERATION_ENTITIES,
     CONF_SITE_NAME,
     CONF_START_DATE,
+    CONF_USE_ENERGY_DASHBOARD,
     DEFAULT_SCAN_HOUR,
     DEFAULT_SCAN_MINUTE,
     DOMAIN,
 )
+from .energy_dashboard import async_get_energy_dashboard_config
 from .models import DailyRecord, Forecasts, MeterSnapshot, SiteConfig
 from .statistics import HistoricalStatisticsReader
 from .statistics_importer import async_import_daily_record_statistics
@@ -114,30 +118,108 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         )
         entry.async_on_unload(unsub)
 
-    @property
-    def site_config(self) -> SiteConfig:
-        """Return merged site configuration."""
+    async def _async_site_config(self) -> SiteConfig:
+        """Return merged site configuration with optional Energy autodiscovery."""
 
         data = {**self.entry.data, **self.entry.options}
+        discovered = None
+        discovery_error: str | None = None
+        if data.get(CONF_USE_ENERGY_DASHBOARD, True):
+            try:
+                discovered = await async_get_energy_dashboard_config(self.hass)
+            except ValueError as err:
+                discovery_error = str(err)
+
+        grid_import_entity = _pick_string(
+            data.get(CONF_GRID_IMPORT_ENTITY),
+            None if discovered is None else discovered.grid_import_entity,
+        )
+        grid_export_entity = _pick_string(
+            data.get(CONF_GRID_EXPORT_ENTITY),
+            None if discovered is None else discovered.grid_export_entity,
+        )
+        pv_generation_entities = _pick_entities(
+            data.get(CONF_PV_GENERATION_ENTITIES),
+            () if discovered is None else discovered.pv_generation_entities,
+        )
+        battery_discharge_entities = _pick_entities(
+            data.get(CONF_BATTERY_DISCHARGE_ENTITIES),
+            () if discovered is None else discovered.battery_discharge_entities,
+        )
+        battery_charge_entities = _pick_entities(
+            data.get(CONF_BATTERY_CHARGE_ENTITIES),
+            () if discovered is None else discovered.battery_charge_entities,
+        )
+        electricity_price = _pick_decimal(
+            data.get(CONF_ELECTRICITY_PRICE),
+            None if discovered is None else discovered.electricity_price,
+        )
+        feed_in_tariff = _pick_decimal(
+            data.get(CONF_FEED_IN_TARIFF),
+            None if discovered is None else discovered.feed_in_tariff,
+            default=0,
+        )
+
+        missing: list[str] = []
+        if not grid_import_entity:
+            missing.append("grid import entity")
+        if not grid_export_entity:
+            missing.append("grid export entity")
+        if not pv_generation_entities:
+            missing.append("PV generation entities")
+        if electricity_price is None:
+            missing.append("electricity price")
+        if missing:
+            msg = f"Missing configuration: {', '.join(missing)}"
+            if discovery_error:
+                msg = f"{discovery_error}. {msg}"
+            raise ValueError(msg)
+
         return SiteConfig(
             site_id=self.entry.entry_id,
             name=data[CONF_SITE_NAME],
             description=data.get(CONF_DESCRIPTION, ""),
             investment_amount=_parse_decimal(data[CONF_INVESTMENT_AMOUNT]),
             start_date=date.fromisoformat(data[CONF_START_DATE]),
-            grid_import_entity=data[CONF_GRID_IMPORT_ENTITY],
-            grid_export_entity=data[CONF_GRID_EXPORT_ENTITY],
-            pv_generation_entities=tuple(
-                _normalize_entities(data[CONF_PV_GENERATION_ENTITIES])
-            ),
-            electricity_prices=(),
-            feed_in_tariffs=(),
+            grid_import_entity=grid_import_entity,
+            grid_export_entity=grid_export_entity,
+            pv_generation_entities=pv_generation_entities,
+            battery_discharge_entities=battery_discharge_entities,
+            battery_charge_entities=battery_charge_entities,
+            electricity_price_eur_kwh=electricity_price,
+            feed_in_tariff_eur_kwh=feed_in_tariff or 0,
         )
 
     async def _async_update_data(self) -> SiteStatus:
         """Refresh current state and perform a rollup when a new day starts."""
 
-        config = self.site_config
+        try:
+            config = await self._async_site_config()
+        except ValueError as err:
+            _LOGGER.debug("Solar amortisation configuration incomplete: %s", err)
+            data = {**self.entry.data, **self.entry.options}
+            records = self.store.records_for_site(self.entry.entry_id)
+            latest_record = records[-1] if records else None
+            remaining = (
+                latest_record.remaining_amount_eur
+                if latest_record is not None
+                else _parse_decimal(data[CONF_INVESTMENT_AMOUNT])
+            )
+            current_date = dt_util.now().date()
+            return SiteStatus(
+                latest_record=latest_record,
+                current_snapshot=None,
+                days_since_start=calculate_days_since_start(
+                    date.fromisoformat(data[CONF_START_DATE]),
+                    current_date,
+                ),
+                forecasts=calculate_forecasts(
+                    records=records,
+                    remaining_amount_eur=remaining,
+                ),
+                setup_issue=str(err),
+                backfill_status=self._backfill_status,
+            )
         current_date = dt_util.now().date()
         current_snapshot, unavailable_entities = self._read_current_snapshot(
             config,
@@ -202,7 +284,6 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         if start_date > end_date:
             return
 
-        data = {**self.entry.data, **self.entry.options}
         reader = HistoricalStatisticsReader(self.hass)
 
         try:
@@ -212,6 +293,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 pv_generation_entities=config.pv_generation_entities,
                 grid_import_entity=config.grid_import_entity,
                 grid_export_entity=config.grid_export_entity,
+                battery_discharge_entities=config.battery_discharge_entities,
+                battery_charge_entities=config.battery_charge_entities,
             )
         except Exception:
             _LOGGER.exception(
@@ -228,8 +311,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             end_date=end_date,
             investment_amount=config.investment_amount,
             daily_deltas=daily_deltas,
-            electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
-            feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
+            electricity_price_eur_kwh=config.electricity_price_eur_kwh,
+            feed_in_tariff_eur_kwh=config.feed_in_tariff_eur_kwh,
             previous_records=records,
         )
         await self.store.async_upsert_many(created)
@@ -261,7 +344,6 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             )
             return
 
-        data = {**self.entry.data, **self.entry.options}
         reader = HistoricalStatisticsReader(self.hass)
         try:
             daily_deltas, statistic_rows = await reader.async_get_daily_delta_result(
@@ -270,6 +352,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
                 pv_generation_entities=config.pv_generation_entities,
                 grid_import_entity=config.grid_import_entity,
                 grid_export_entity=config.grid_export_entity,
+                battery_discharge_entities=config.battery_discharge_entities,
+                battery_charge_entities=config.battery_charge_entities,
             )
         except Exception as err:
             self._backfill_status = BackfillStatus(
@@ -289,8 +373,8 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             end_date=end_date,
             investment_amount=config.investment_amount,
             daily_deltas=daily_deltas,
-            electricity_price_eur_kwh=_parse_decimal(data[CONF_ELECTRICITY_PRICE]),
-            feed_in_tariff_eur_kwh=_parse_decimal(data.get(CONF_FEED_IN_TARIFF, 0)),
+            electricity_price_eur_kwh=config.electricity_price_eur_kwh,
+            feed_in_tariff_eur_kwh=config.feed_in_tariff_eur_kwh,
             previous_records=[],
         )
         await self.store.async_upsert_many(backfilled)
@@ -349,7 +433,27 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         if grid_export is None:
             unavailable_entities.append(config.grid_export_entity)
 
-        if None in pv_values or grid_import is None or grid_export is None:
+        battery_discharge_values = []
+        for entity_id in config.battery_discharge_entities:
+            value = self._state_as_kwh(entity_id)
+            if value is None:
+                unavailable_entities.append(entity_id)
+            battery_discharge_values.append(value)
+
+        battery_charge_values = []
+        for entity_id in config.battery_charge_entities:
+            value = self._state_as_kwh(entity_id)
+            if value is None:
+                unavailable_entities.append(entity_id)
+            battery_charge_values.append(value)
+
+        if (
+            None in pv_values
+            or grid_import is None
+            or grid_export is None
+            or None in battery_discharge_values
+            or None in battery_charge_values
+        ):
             return None, unavailable_entities
 
         return MeterSnapshot(
@@ -358,6 +462,12 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             pv_generation_kwh=sum(value for value in pv_values if value is not None),
             grid_import_kwh=grid_import,
             grid_export_kwh=grid_export,
+            battery_discharge_kwh=sum(
+                value for value in battery_discharge_values if value is not None
+            ),
+            battery_charge_kwh=sum(
+                value for value in battery_charge_values if value is not None
+            ),
         ), []
 
     def _state_as_kwh(self, entity_id: str) -> float | None:
@@ -403,6 +513,34 @@ def _normalize_entities(value: str | list[str] | tuple[str, ...]) -> list[str]:
     if isinstance(value, str):
         return [entity.strip() for entity in value.split(",") if entity.strip()]
     return [str(entity).strip() for entity in value if str(entity).strip()]
+
+
+def _pick_string(primary: Any, fallback: str | None) -> str | None:
+    if isinstance(primary, str) and primary.strip():
+        return primary.strip()
+    return fallback
+
+
+def _pick_entities(
+    primary: Any,
+    fallback: tuple[str, ...],
+) -> tuple[str, ...]:
+    if primary in (None, "", []):
+        return fallback
+    return tuple(_normalize_entities(primary))
+
+
+def _pick_decimal(
+    primary: Any,
+    fallback: float | None,
+    *,
+    default: float | None = None,
+) -> float | None:
+    if primary not in (None, ""):
+        return _parse_decimal(primary)
+    if fallback is not None:
+        return fallback
+    return default
 
 
 def _statistic_entity_ids_for_entry(hass, entry_id: str) -> dict[str, str]:

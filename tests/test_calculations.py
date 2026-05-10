@@ -14,6 +14,9 @@ from custom_components.solar_amortisation.calculations import (
     calculate_forecasts,
     value_for_date,
 )
+from custom_components.solar_amortisation.energy_dashboard import (
+    energy_dashboard_config_from_prefs,
+)
 from custom_components.solar_amortisation.models import (
     DailyRecord,
     EnergyDeltas,
@@ -58,6 +61,8 @@ class CalculationTest(unittest.TestCase):
         )
 
         self.assertEqual(record.self_consumed_pv_kwh, 12)
+        self.assertEqual(record.battery_discharge_kwh, 0)
+        self.assertEqual(record.battery_charge_kwh, 0)
         self.assertEqual(record.daily_savings_eur, 3.84)
         self.assertEqual(record.daily_revenue_eur, 0.64)
         self.assertEqual(record.daily_return_eur, 4.48)
@@ -86,15 +91,37 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(record.cumulative_return_eur, 15)
         self.assertEqual(record.remaining_amount_eur, 85)
 
+    def test_calculate_daily_record_uses_battery_aware_local_consumption(self) -> None:
+        record = calculate_daily_record(
+            site_id="site-a",
+            record_date=date(2026, 5, 8),
+            investment_amount=1_000,
+            deltas=EnergyDeltas(
+                pv_generation_kwh=20.1,
+                grid_import_kwh=4.33,
+                grid_export_kwh=10.5,
+                battery_discharge_kwh=2.0,
+                battery_charge_kwh=1.6,
+            ),
+            electricity_price_eur_kwh=0.3485,
+            feed_in_tariff_eur_kwh=0,
+            previous_records=[],
+        )
+
+        self.assertAlmostEqual(record.self_consumed_pv_kwh, 10.0)
+        self.assertAlmostEqual(record.daily_return_eur, 3.485)
+
     def test_calculate_energy_deltas_never_goes_negative(self) -> None:
-        previous = MeterSnapshot("site-a", date(2026, 5, 3), 100, 80, 30)
-        current = MeterSnapshot("site-a", date(2026, 5, 4), 90, 85, 42)
+        previous = MeterSnapshot("site-a", date(2026, 5, 3), 100, 80, 30, 5, 4)
+        current = MeterSnapshot("site-a", date(2026, 5, 4), 90, 85, 42, 8, 3)
 
         deltas = calculate_energy_deltas(previous=previous, current=current)
 
         self.assertEqual(deltas.pv_generation_kwh, 0)
         self.assertEqual(deltas.grid_import_kwh, 5)
         self.assertEqual(deltas.grid_export_kwh, 12)
+        self.assertEqual(deltas.battery_discharge_kwh, 3)
+        self.assertEqual(deltas.battery_charge_kwh, 0)
 
     def test_calculate_days_since_start_clamps_to_zero(self) -> None:
         self.assertEqual(
@@ -224,6 +251,29 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(deltas[date(2026, 5, 1)].grid_import_kwh, 3)
         self.assertEqual(deltas[date(2026, 5, 1)].grid_export_kwh, 2)
 
+    def test_build_daily_deltas_includes_battery_flows(self) -> None:
+        rows = {
+            "sensor.pv": [{"start": "2026-05-01T00:00:00+00:00", "change": 10}],
+            "sensor.import": [{"start": "2026-05-01T00:00:00+00:00", "change": 3}],
+            "sensor.export": [{"start": "2026-05-01T00:00:00+00:00", "change": 2}],
+            "sensor.battery_out": [{"start": "2026-05-01T00:00:00+00:00", "change": 1.5}],
+            "sensor.battery_in": [{"start": "2026-05-01T00:00:00+00:00", "change": 0.7}],
+        }
+
+        deltas = build_daily_deltas_from_statistics(
+            rows=rows,
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 1),
+            pv_generation_entities=("sensor.pv",),
+            grid_import_entity="sensor.import",
+            grid_export_entity="sensor.export",
+            battery_discharge_entities=("sensor.battery_out",),
+            battery_charge_entities=("sensor.battery_in",),
+        )
+
+        self.assertEqual(deltas[date(2026, 5, 1)].battery_discharge_kwh, 1.5)
+        self.assertEqual(deltas[date(2026, 5, 1)].battery_charge_kwh, 0.7)
+
     def test_build_daily_deltas_allows_pv_sources_to_start_later(self) -> None:
         rows = {
             "sensor.pv_early": [
@@ -333,6 +383,42 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(rows[0]["min"], 4.2)
         self.assertEqual(rows[0]["max"], 4.2)
 
+    def test_energy_dashboard_config_extracts_sources(self) -> None:
+        config = energy_dashboard_config_from_prefs(
+            {
+                "energy_sources": [
+                    {
+                        "type": "solar",
+                        "stat_energy_from": "sensor.pv_a",
+                    },
+                    {
+                        "type": "solar",
+                        "stat_energy_from": "sensor.pv_b",
+                    },
+                    {
+                        "type": "grid",
+                        "stat_energy_from": "sensor.grid_in",
+                        "stat_energy_to": "sensor.grid_out",
+                        "number_energy_price": 0.34,
+                        "number_energy_price_export": 0.08,
+                    },
+                    {
+                        "type": "battery",
+                        "stat_energy_from": "sensor.battery_out",
+                        "stat_energy_to": "sensor.battery_in",
+                    },
+                ]
+            }
+        )
+
+        self.assertEqual(config.grid_import_entity, "sensor.grid_in")
+        self.assertEqual(config.grid_export_entity, "sensor.grid_out")
+        self.assertEqual(config.pv_generation_entities, ("sensor.pv_a", "sensor.pv_b"))
+        self.assertEqual(config.battery_discharge_entities, ("sensor.battery_out",))
+        self.assertEqual(config.battery_charge_entities, ("sensor.battery_in",))
+        self.assertEqual(config.electricity_price, 0.34)
+        self.assertEqual(config.feed_in_tariff, 0.08)
+
 
 def _record(record_date: date, daily_return: float) -> DailyRecord:
     return DailyRecord(
@@ -342,6 +428,8 @@ def _record(record_date: date, daily_return: float) -> DailyRecord:
         grid_import_kwh=0,
         grid_export_kwh=0,
         self_consumed_pv_kwh=0,
+        battery_discharge_kwh=0,
+        battery_charge_kwh=0,
         electricity_price_eur_kwh=0,
         feed_in_tariff_eur_kwh=0,
         daily_savings_eur=daily_return,

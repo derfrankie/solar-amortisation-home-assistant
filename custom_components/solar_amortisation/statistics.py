@@ -29,6 +29,8 @@ class HistoricalStatisticsReader:
         pv_generation_entities: Iterable[str],
         grid_import_entity: str,
         grid_export_entity: str,
+        battery_discharge_entities: Iterable[str] = (),
+        battery_charge_entities: Iterable[str] = (),
     ) -> dict[date, EnergyDeltas]:
         """Return historical daily deltas for the configured site entities."""
 
@@ -36,6 +38,8 @@ class HistoricalStatisticsReader:
             *pv_generation_entities,
             grid_import_entity,
             grid_export_entity,
+            *battery_discharge_entities,
+            *battery_charge_entities,
         ]
         local_timezone = self._local_timezone()
         rows = await self._async_fetch_statistics(
@@ -50,6 +54,8 @@ class HistoricalStatisticsReader:
             pv_generation_entities=tuple(pv_generation_entities),
             grid_import_entity=grid_import_entity,
             grid_export_entity=grid_export_entity,
+            battery_discharge_entities=tuple(battery_discharge_entities),
+            battery_charge_entities=tuple(battery_charge_entities),
             local_timezone=local_timezone,
         )
 
@@ -61,6 +67,8 @@ class HistoricalStatisticsReader:
         pv_generation_entities: Iterable[str],
         grid_import_entity: str,
         grid_export_entity: str,
+        battery_discharge_entities: Iterable[str] = (),
+        battery_charge_entities: Iterable[str] = (),
     ) -> tuple[dict[date, EnergyDeltas], dict[str, int]]:
         """Return historical daily deltas and row counts for diagnostics."""
 
@@ -68,6 +76,8 @@ class HistoricalStatisticsReader:
             *pv_generation_entities,
             grid_import_entity,
             grid_export_entity,
+            *battery_discharge_entities,
+            *battery_charge_entities,
         ]
         local_timezone = self._local_timezone()
         rows = await self._async_fetch_statistics(
@@ -83,6 +93,8 @@ class HistoricalStatisticsReader:
                 pv_generation_entities=tuple(pv_generation_entities),
                 grid_import_entity=grid_import_entity,
                 grid_export_entity=grid_export_entity,
+                battery_discharge_entities=tuple(battery_discharge_entities),
+                battery_charge_entities=tuple(battery_charge_entities),
                 local_timezone=local_timezone,
             ),
             {
@@ -135,6 +147,8 @@ def build_daily_deltas_from_statistics(
     pv_generation_entities: tuple[str, ...],
     grid_import_entity: str,
     grid_export_entity: str,
+    battery_discharge_entities: tuple[str, ...] = (),
+    battery_charge_entities: tuple[str, ...] = (),
     entity_units: Mapping[str, str | None] | None = None,
     local_timezone: tzinfo | None = None,
 ) -> dict[date, EnergyDeltas]:
@@ -165,6 +179,22 @@ def build_daily_deltas_from_statistics(
         unit=units.get(grid_export_entity),
         local_timezone=local_timezone,
     )
+    battery_discharge_by_day = _sum_entities_by_day(
+        rows,
+        battery_discharge_entities,
+        start_date,
+        end_date,
+        entity_units=units,
+        local_timezone=local_timezone,
+    )
+    battery_charge_by_day = _sum_entities_by_day(
+        rows,
+        battery_charge_entities,
+        start_date,
+        end_date,
+        entity_units=units,
+        local_timezone=local_timezone,
+    )
 
     deltas: dict[date, EnergyDeltas] = {}
     current_date = start_date
@@ -174,6 +204,8 @@ def build_daily_deltas_from_statistics(
                 pv_generation_kwh=pv_by_day.get(current_date, 0),
                 grid_import_kwh=import_by_day[current_date],
                 grid_export_kwh=export_by_day[current_date],
+                battery_discharge_kwh=battery_discharge_by_day.get(current_date, 0),
+                battery_charge_kwh=battery_charge_by_day.get(current_date, 0),
             )
         current_date += timedelta(days=1)
     return deltas

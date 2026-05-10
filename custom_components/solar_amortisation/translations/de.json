@@ -8,22 +8,27 @@
     "step": {
       "user": {
         "title": "Solar-Amortisationsstandort",
-        "description": "Konfiguriere einen Standort mit gemeinsamen Netzzaehlern und einer oder mehreren PV-Erzeugungsentitaeten.",
+        "description": "Konfiguriere einen Standort. Die Integration kann Netz-, Solar-, Batterie- und Preisquellen aus dem Energy-Dashboard automatisch uebernehmen, mit manuellen Overrides als Fallback.",
         "data": {
           "site_name": "Standortname",
           "description": "Beschreibung",
           "investment_amount": "Investitionsbetrag",
           "start_date": "Startdatum",
+          "use_energy_dashboard": "Energy-Dashboard-Konfiguration verwenden",
           "grid_import_entity": "Entitaet Netzbezug gesamt",
           "grid_export_entity": "Entitaet Netzeinspeisung gesamt",
           "pv_generation_entities": "Entitaeten PV-Erzeugung gesamt",
+          "battery_discharge_entities": "Entitaeten Batterieentladung",
+          "battery_charge_entities": "Entitaeten Batterieladung",
           "electricity_price": "Strompreis",
           "feed_in_tariff": "Einspeiseverguetung"
         }
       }
     },
     "error": {
-      "invalid_date": "Bitte YYYY-MM-DD verwenden."
+      "invalid_date": "Bitte YYYY-MM-DD verwenden.",
+      "invalid_number": "Bitte eine gueltige Zahl verwenden.",
+      "required": "Dieses Feld ist erforderlich."
     },
     "abort": {
       "already_configured": "Dieser Standort ist bereits konfiguriert."
@@ -38,9 +43,12 @@
           "description": "Beschreibung",
           "investment_amount": "Investitionsbetrag",
           "start_date": "Startdatum",
+          "use_energy_dashboard": "Energy-Dashboard-Konfiguration verwenden",
           "grid_import_entity": "Entitaet Netzbezug gesamt",
           "grid_export_entity": "Entitaet Netzeinspeisung gesamt",
           "pv_generation_entities": "Entitaeten PV-Erzeugung gesamt",
+          "battery_discharge_entities": "Entitaeten Batterieentladung",
+          "battery_charge_entities": "Entitaeten Batterieladung",
           "electricity_price": "Strompreis",
           "feed_in_tariff": "Einspeiseverguetung"
         }
@@ -74,7 +82,7 @@
         "name": "PV-Erzeugung gestern"
       },
       "self_consumed_pv_yesterday": {
-        "name": "PV-Eigenverbrauch gestern"
+        "name": "Lokal gedeckter Verbrauch gestern"
       },
       "grid_import_yesterday": {
         "name": "Netzbezug gestern"

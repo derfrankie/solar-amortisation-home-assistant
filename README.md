@@ -10,7 +10,8 @@ This custom integration calculates daily return, cumulative return, remaining in
 ## What it does
 
 - Supports one or more configured sites.
-- Uses one shared grid import meter, one shared grid export meter, and one or more PV generation meters per site.
+- Can autodiscover grid, solar, battery, and fixed price sources from the Home Assistant Energy dashboard.
+- Supports manual overrides for autodiscovered entities and prices.
 - Stores the configured electricity price and feed-in tariff per recorded day.
 - Backfills historical daily records from Home Assistant long-term statistics when your start date is in the past.
 - Creates sensors for yesterday's return, cumulative return, remaining amount, amortisation progress, and multiple forecast windows.
@@ -61,11 +62,8 @@ This integration is installed through HACS as a custom repository.
    - `Site name`
    - `Investment amount`
    - `Start date`
-   - `Total grid import entity`
-   - `Total grid export entity`
-   - `Total PV generation entities`
-   - `Electricity price`
-   - `Feed-in tariff`
+   - Optional: enable `Use Energy dashboard configuration`
+   - Optional manual overrides for grid, solar, battery, electricity price, and feed-in tariff
 5. Submit the form.
 
 You can create multiple entries if you want to track multiple sites.
@@ -95,16 +93,22 @@ For each day:
 
 ```text
 pv_generation = sum(daily delta of PV generation entities)
+grid_import = daily delta of grid import entity
 grid_export = daily delta of grid export entity
-self_consumed_pv = max(pv_generation - grid_export, 0)
+battery_discharge = sum(daily delta of battery discharge entities)
+battery_charge = sum(daily delta of battery charge entities)
+local_usage = max(
+  pv_generation + battery_discharge - grid_export - battery_charge,
+  0
+)
 
-daily_savings = self_consumed_pv * electricity_price
+daily_savings = local_usage * electricity_price
 daily_revenue = grid_export * feed_in_tariff
 daily_return = daily_savings + daily_revenue
 remaining_amount = investment_amount - cumulative_return
 ```
 
-Grid import is stored for reporting and future analysis, but the current return model is based on avoided import plus export revenue.
+This mirrors the Energy dashboard flow model better than the older `pv - export` approximation, especially when a battery is present.
 
 ## Notes
 
