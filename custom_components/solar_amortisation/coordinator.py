@@ -108,6 +108,7 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
         self.entry = entry
         self.store = store
         self._backfill_status = BackfillStatus()
+        self._site_name = entry.title
 
         unsub = async_track_time_change(
             hass,
@@ -190,11 +191,18 @@ class SolarAmortisationCoordinator(DataUpdateCoordinator[SiteStatus]):
             feed_in_tariff_eur_kwh=feed_in_tariff or 0,
         )
 
+    @property
+    def site_name(self) -> str:
+        """Return the latest resolved site name."""
+
+        return self._site_name
+
     async def _async_update_data(self) -> SiteStatus:
         """Refresh current state and perform a rollup when a new day starts."""
 
         try:
             config = await self._async_site_config()
+            self._site_name = config.name
         except ValueError as err:
             _LOGGER.debug("Solar amortisation configuration incomplete: %s", err)
             data = {**self.entry.data, **self.entry.options}

@@ -255,7 +255,7 @@ class SolarAmortisationSensor(
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, coordinator.entry.entry_id)},
-            "name": coordinator.site_config.name,
+            "name": coordinator.site_name,
             "manufacturer": "Solar Amortisation",
         }
 
@@ -275,7 +275,7 @@ class SolarAmortisationSensor(
             return None
 
         attrs = {
-            "site_name": self.coordinator.site_config.name,
+            "site_name": self.coordinator.site_name,
             "last_record_date": (
                 self.coordinator.data.latest_record.record_date.isoformat()
                 if self.coordinator.data.latest_record
