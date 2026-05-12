@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from datetime import datetime, time, tzinfo
+from datetime import datetime, time, timedelta, tzinfo
 from typing import TYPE_CHECKING, Any
 
 from .models import DailyRecord
@@ -189,16 +189,20 @@ def build_measurement_statistics(
     rows: list[dict[str, Any]] = []
     for record in sorted(records, key=lambda item: item.record_date):
         value = value_fn(record)
-        rows.append(
-            {
-                "start": datetime.combine(
-                    record.record_date,
-                    time.min,
-                    tzinfo=local_timezone,
-                ),
-                "mean": value,
-                "min": value,
-                "max": value,
-            },
+        current = datetime.combine(
+            record.record_date,
+            time.min,
+            tzinfo=local_timezone,
         )
+        end = current + timedelta(days=1)
+        while current < end:
+            rows.append(
+                {
+                    "start": current,
+                    "mean": value,
+                    "min": value,
+                    "max": value,
+                },
+            )
+            current += timedelta(hours=1)
     return rows

@@ -10,6 +10,7 @@ from typing import Any
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfEnergy, UnitOfTime
@@ -100,14 +101,15 @@ def _total_consumption(status: SiteStatus) -> float | None:
 
 SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     # These entities expose the latest closed accounting record for dashboards and
-    # automations. Long-term daily history is imported from stored records with
-    # record-date timestamps; do not let recorder derive statistics from these
-    # held latest-value states.
+    # automations. Long-term statistics are imported from stored records with
+    # record-date timestamps so closed-day buckets align to the real accounting
+    # date even though the live state intentionally holds the latest value.
     SolarSensorEntityDescription(
         key="daily_return_yesterday",
         translation_key="daily_return_yesterday",
         fallback_name="Daily return yesterday",
         native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "daily_return_eur"),
     ),
@@ -116,6 +118,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="cumulative_return",
         fallback_name="Cumulative return",
         native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "cumulative_return_eur"),
     ),
@@ -124,6 +127,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="remaining_amount",
         fallback_name="Remaining amount",
         native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "remaining_amount_eur"),
     ),
@@ -132,6 +136,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="days_since_start",
         fallback_name="Days since start",
         native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.days_since_start,
     ),
     SolarSensorEntityDescription(
@@ -139,6 +144,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="forecast_days_30",
         fallback_name="Forecast days 30 days",
         native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_30,
         extra_attrs_fn=_forecast_attrs,
     ),
@@ -147,6 +153,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="forecast_days_365",
         fallback_name="Forecast days 365 days",
         native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_365,
         extra_attrs_fn=_forecast_attrs,
     ),
@@ -155,6 +162,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="forecast_days_since_start",
         fallback_name="Forecast days since start",
         native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda status: status.forecasts.days_since_start,
         extra_attrs_fn=_forecast_attrs,
     ),
@@ -163,6 +171,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="pv_generation_yesterday",
         fallback_name="PV generation yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "pv_generation_kwh"),
     ),
@@ -171,6 +180,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="self_consumed_pv_yesterday",
         fallback_name="Self-consumed PV yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "self_consumed_pv_kwh"),
     ),
@@ -179,6 +189,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="total_consumption_yesterday",
         fallback_name="Total consumption yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=_total_consumption,
     ),
@@ -187,6 +198,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="grid_import_yesterday",
         fallback_name="Grid import yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_import_kwh"),
     ),
@@ -195,6 +207,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="grid_export_yesterday",
         fallback_name="Grid export yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_export_kwh"),
     ),
@@ -203,6 +216,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="battery_discharge_yesterday",
         fallback_name="Battery discharge yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "battery_discharge_kwh"),
     ),
@@ -211,6 +225,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="battery_charge_yesterday",
         fallback_name="Battery charge yesterday",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "battery_charge_kwh"),
     ),
@@ -219,6 +234,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="daily_savings_yesterday",
         fallback_name="Daily savings yesterday",
         native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "daily_savings_eur"),
     ),
@@ -227,6 +243,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="daily_revenue_yesterday",
         fallback_name="Daily revenue yesterday",
         native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "daily_revenue_eur"),
     ),
@@ -235,6 +252,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="electricity_price_yesterday",
         fallback_name="Electricity price yesterday",
         native_unit_of_measurement=EUR_PER_KWH,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=4,
         value_fn=lambda status: _latest(status, "electricity_price_eur_kwh"),
     ),
@@ -243,6 +261,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="feed_in_tariff_yesterday",
         fallback_name="Feed-in tariff yesterday",
         native_unit_of_measurement=EUR_PER_KWH,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=4,
         value_fn=lambda status: _latest(status, "feed_in_tariff_eur_kwh"),
     ),
@@ -251,6 +270,7 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         translation_key="amortisation_progress",
         fallback_name="Amortisation progress",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
         value_fn=_progress,
     ),

@@ -371,17 +371,19 @@ class CalculationTest(unittest.TestCase):
         self.assertEqual(deltas[date(2026, 5, 1)].grid_import_kwh, 3)
         self.assertEqual(deltas[date(2026, 5, 1)].grid_export_kwh, 2)
 
-    def test_build_measurement_statistics_uses_record_date_midnight(self) -> None:
+    def test_build_measurement_statistics_fills_record_date(self) -> None:
         rows = build_measurement_statistics(
             records=[_record(date(2026, 5, 1), 4.2)],
             local_timezone=ZoneInfo("Europe/Berlin"),
             value_fn=lambda record: record.daily_return_eur,
         )
 
+        self.assertEqual(len(rows), 24)
         self.assertEqual(rows[0]["start"].isoformat(), "2026-05-01T00:00:00+02:00")
-        self.assertEqual(rows[0]["mean"], 4.2)
-        self.assertEqual(rows[0]["min"], 4.2)
-        self.assertEqual(rows[0]["max"], 4.2)
+        self.assertEqual(rows[-1]["start"].isoformat(), "2026-05-01T23:00:00+02:00")
+        self.assertTrue(all(row["mean"] == 4.2 for row in rows))
+        self.assertTrue(all(row["min"] == 4.2 for row in rows))
+        self.assertTrue(all(row["max"] == 4.2 for row in rows))
 
     def test_energy_dashboard_config_extracts_sources(self) -> None:
         config = energy_dashboard_config_from_prefs(
