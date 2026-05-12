@@ -84,11 +84,26 @@
       "self_consumed_pv_yesterday": {
         "name": "Locally covered usage yesterday"
       },
+      "total_consumption_yesterday": {
+        "name": "Total consumption yesterday"
+      },
       "grid_import_yesterday": {
         "name": "Grid import yesterday"
       },
       "grid_export_yesterday": {
         "name": "Grid export yesterday"
+      },
+      "battery_discharge_yesterday": {
+        "name": "Battery discharge yesterday"
+      },
+      "battery_charge_yesterday": {
+        "name": "Battery charge yesterday"
+      },
+      "daily_savings_yesterday": {
+        "name": "Daily savings yesterday"
+      },
+      "daily_revenue_yesterday": {
+        "name": "Daily revenue yesterday"
       },
       "electricity_price_yesterday": {
         "name": "Electricity price yesterday"

@@ -36,6 +36,10 @@ def _progress_for_record(record: DailyRecord) -> float:
     return min(max(record.cumulative_return_eur / investment * 100, 0), 100)
 
 
+def _total_consumption_for_record(record: DailyRecord) -> float:
+    return round(record.grid_import_kwh + record.self_consumed_pv_kwh, 6)
+
+
 STATISTIC_SENSOR_DEFINITIONS: tuple[StatisticSensorDefinition, ...] = (
     StatisticSensorDefinition(
         key="daily_return_yesterday",
@@ -68,6 +72,12 @@ STATISTIC_SENSOR_DEFINITIONS: tuple[StatisticSensorDefinition, ...] = (
         value_fn=lambda record: record.self_consumed_pv_kwh,
     ),
     StatisticSensorDefinition(
+        key="total_consumption_yesterday",
+        unit=KWH,
+        unit_class="energy",
+        value_fn=_total_consumption_for_record,
+    ),
+    StatisticSensorDefinition(
         key="grid_import_yesterday",
         unit=KWH,
         unit_class="energy",
@@ -78,6 +88,30 @@ STATISTIC_SENSOR_DEFINITIONS: tuple[StatisticSensorDefinition, ...] = (
         unit=KWH,
         unit_class="energy",
         value_fn=lambda record: record.grid_export_kwh,
+    ),
+    StatisticSensorDefinition(
+        key="battery_discharge_yesterday",
+        unit=KWH,
+        unit_class="energy",
+        value_fn=lambda record: record.battery_discharge_kwh,
+    ),
+    StatisticSensorDefinition(
+        key="battery_charge_yesterday",
+        unit=KWH,
+        unit_class="energy",
+        value_fn=lambda record: record.battery_charge_kwh,
+    ),
+    StatisticSensorDefinition(
+        key="daily_savings_yesterday",
+        unit=EUR,
+        unit_class=None,
+        value_fn=lambda record: record.daily_savings_eur,
+    ),
+    StatisticSensorDefinition(
+        key="daily_revenue_yesterday",
+        unit=EUR,
+        unit_class=None,
+        value_fn=lambda record: record.daily_revenue_eur,
     ),
     StatisticSensorDefinition(
         key="electricity_price_yesterday",

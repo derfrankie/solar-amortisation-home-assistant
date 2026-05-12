@@ -92,6 +92,13 @@ def _progress(status: SiteStatus) -> float | None:
     return min(max(record.cumulative_return_eur / investment * 100, 0), 100)
 
 
+def _total_consumption(status: SiteStatus) -> float | None:
+    record = status.latest_record
+    if record is None:
+        return None
+    return round(record.grid_import_kwh + record.self_consumed_pv_kwh, 6)
+
+
 SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
     SolarSensorEntityDescription(
         key="daily_return_yesterday",
@@ -174,6 +181,15 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         value_fn=lambda status: _latest(status, "self_consumed_pv_kwh"),
     ),
     SolarSensorEntityDescription(
+        key="total_consumption_yesterday",
+        translation_key="total_consumption_yesterday",
+        fallback_name="Total consumption yesterday",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=_total_consumption,
+    ),
+    SolarSensorEntityDescription(
         key="grid_import_yesterday",
         translation_key="grid_import_yesterday",
         fallback_name="Grid import yesterday",
@@ -190,6 +206,42 @@ SENSOR_DESCRIPTIONS: tuple[SolarSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         value_fn=lambda status: _latest(status, "grid_export_kwh"),
+    ),
+    SolarSensorEntityDescription(
+        key="battery_discharge_yesterday",
+        translation_key="battery_discharge_yesterday",
+        fallback_name="Battery discharge yesterday",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=lambda status: _latest(status, "battery_discharge_kwh"),
+    ),
+    SolarSensorEntityDescription(
+        key="battery_charge_yesterday",
+        translation_key="battery_charge_yesterday",
+        fallback_name="Battery charge yesterday",
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=lambda status: _latest(status, "battery_charge_kwh"),
+    ),
+    SolarSensorEntityDescription(
+        key="daily_savings_yesterday",
+        translation_key="daily_savings_yesterday",
+        fallback_name="Daily savings yesterday",
+        native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=lambda status: _latest(status, "daily_savings_eur"),
+    ),
+    SolarSensorEntityDescription(
+        key="daily_revenue_yesterday",
+        translation_key="daily_revenue_yesterday",
+        fallback_name="Daily revenue yesterday",
+        native_unit_of_measurement=EUR,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=lambda status: _latest(status, "daily_revenue_eur"),
     ),
     SolarSensorEntityDescription(
         key="electricity_price_yesterday",

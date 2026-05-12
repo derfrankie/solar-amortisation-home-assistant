@@ -81,8 +81,13 @@ For each configured site, the integration creates sensors for:
 - Forecast days based on since-start average
 - PV generation yesterday
 - Self-consumed PV yesterday
+- Total consumption yesterday
 - Grid import yesterday
 - Grid export yesterday
+- Battery discharge yesterday
+- Battery charge yesterday
+- Daily savings yesterday
+- Daily revenue yesterday
 - Electricity price yesterday
 - Feed-in tariff yesterday
 - Amortisation progress
@@ -101,6 +106,7 @@ local_usage = max(
   pv_generation + battery_discharge - grid_export - battery_charge,
   0
 )
+total_consumption = grid_import + local_usage
 
 daily_savings = local_usage * electricity_price
 daily_revenue = grid_export * feed_in_tariff
