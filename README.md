@@ -94,10 +94,13 @@ For each configured site, the integration creates sensors for:
 | Feed-in tariff yesterday | EUR/kWh | Feed-in tariff stored on that daily record. | Yes |
 | Amortisation progress | % | Paid-back share of the investment. This is `cumulative_return / investment_amount * 100`. | Yes |
 
-Sensors marked with long-term daily history are also imported as Home Assistant
-statistics from the integration's stored daily records. They are the best values
-to use for custom history graphs, Statistics Graph cards, or external analysis.
-Forecast and day-count sensors are current-state estimates only.
+The live entities show the latest closed accounting record, which is usually
+yesterday but can be an older day if the configured source entities or recorder
+statistics are not ready yet. Sensors marked with long-term daily history are
+also imported as Home Assistant statistics from the integration's stored daily
+records. Those imported statistics use the real accounting record date and are
+the values to use for custom history graphs, Statistics Graph cards, or external
+analysis. Forecast and day-count sensors are current-state estimates only.
 
 ## Accounting model
 
