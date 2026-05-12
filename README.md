@@ -72,25 +72,32 @@ You can create multiple entries if you want to track multiple sites.
 
 For each configured site, the integration creates sensors for:
 
-- Daily return yesterday
-- Cumulative return
-- Remaining amount
-- Days since start
-- Forecast days based on 30-day average
-- Forecast days based on 365-day average
-- Forecast days based on since-start average
-- PV generation yesterday
-- Self-consumed PV yesterday
-- Total consumption yesterday
-- Grid import yesterday
-- Grid export yesterday
-- Battery discharge yesterday
-- Battery charge yesterday
-- Daily savings yesterday
-- Daily revenue yesterday
-- Electricity price yesterday
-- Feed-in tariff yesterday
-- Amortisation progress
+| Sensor | Unit | What it means | Long-term daily history |
+| --- | --- | --- | --- |
+| Daily return yesterday | EUR | Total financial return for the recorded day. This is `daily_savings + daily_revenue`. | Yes |
+| Cumulative return | EUR | Sum of all recorded daily returns since the configured start date. | Yes |
+| Remaining amount | EUR | Investment amount still not paid back. This is `investment_amount - cumulative_return`. | Yes |
+| Days since start | days | Number of days between the configured start date and today. | No |
+| Forecast days 30 days | days | Estimated remaining payoff days based on the average daily return of the last 30 records. | No |
+| Forecast days 365 days | days | Estimated remaining payoff days based on the average daily return of the last 365 records. | No |
+| Forecast days since start | days | Estimated remaining payoff days based on the average daily return across all records. | No |
+| PV generation yesterday | kWh | Sum of daily PV generation from all configured PV generation entities. | Yes |
+| Self-consumed PV yesterday | kWh | Locally covered usage from solar and battery flows. This is the energy value used for savings. | Yes |
+| Total consumption yesterday | kWh | Site consumption for the day. This is `grid_import + self_consumed_pv`. | Yes |
+| Grid import yesterday | kWh | Energy imported from the grid during the recorded day. | Yes |
+| Grid export yesterday | kWh | Energy exported to the grid during the recorded day. | Yes |
+| Battery discharge yesterday | kWh | Energy discharged from configured battery discharge entities during the recorded day. | Yes |
+| Battery charge yesterday | kWh | Energy charged into configured battery charge entities during the recorded day. | Yes |
+| Daily savings yesterday | EUR | Avoided grid cost from locally covered usage. This is `self_consumed_pv * electricity_price`. | Yes |
+| Daily revenue yesterday | EUR | Feed-in revenue from exported energy. This is `grid_export * feed_in_tariff`. | Yes |
+| Electricity price yesterday | EUR/kWh | Electricity price stored on that daily record. | Yes |
+| Feed-in tariff yesterday | EUR/kWh | Feed-in tariff stored on that daily record. | Yes |
+| Amortisation progress | % | Paid-back share of the investment. This is `cumulative_return / investment_amount * 100`. | Yes |
+
+Sensors marked with long-term daily history are also imported as Home Assistant
+statistics from the integration's stored daily records. They are the best values
+to use for custom history graphs, Statistics Graph cards, or external analysis.
+Forecast and day-count sensors are current-state estimates only.
 
 ## Accounting model
 

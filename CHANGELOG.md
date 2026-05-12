@@ -5,6 +5,11 @@ All notable changes to Solar Amortisation are documented here.
 This project uses GitHub Releases for HACS-visible versions. Keep the release
 notes in GitHub aligned with the matching section in this file.
 
+## [0.1.4] - 2026-05-1207
+- workig release with more sensors
+- and a new calculation of the return
+- updated readme with more details
+
 ## [0.1.2] - 2026-05-07
 
 Backfill and rollup Saving Fix - when new start of HA no damage 
